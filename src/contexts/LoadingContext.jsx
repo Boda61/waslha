@@ -5,10 +5,7 @@ const LoadingContext = createContext(null);
 export function LoadingProvider({ children }) {
   const [isInitializing, setIsInitializing] = useState(true);
 
-  console.log('[LoadingProvider] isInitializing:', isInitializing);
-
   const completeInitialization = useCallback(() => {
-    console.log('[LoadingProvider] completeInitialization called');
     setIsInitializing(false);
   }, []);
 

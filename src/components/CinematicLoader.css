@@ -1,6 +1,20 @@
 /* CinematicLoader Premium Animations */
 
 /* ─────────────────────────────────────── */
+/* Base Loading Screen                     */
+/* ─────────────────────────────────────── */
+
+.cinematic-loader-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─────────────────────────────────────── */
 /* Background Glow Animations             */
 /* ─────────────────────────────────────── */
 
@@ -317,12 +331,21 @@
   100% {
     opacity: 0;
     pointer-events: none;
+    visibility: hidden;
   }
 }
 
 /* This class will be added dynamically when loading completes */
 .loader-exiting {
   animation: loader-fade-out 0.6s ease-out forwards;
+}
+
+/* Reduced-motion: no fade needed, hand off immediately */
+.loader-reduced-motion.loader-exiting {
+  animation: none;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 /* ─────────────────────────────────────── */

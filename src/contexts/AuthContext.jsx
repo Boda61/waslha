@@ -8,7 +8,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null); // Supabase auth user
   const [profile, setProfile] = useState(null); // public.profiles row
   const [initializing, setInitializing] = useState(true);
-  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   const { completeInitialization } = useLoading();
 
   // Restore / track session on mount.
