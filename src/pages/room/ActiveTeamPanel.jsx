@@ -36,7 +36,7 @@ export default function ActiveTeamPanel({
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {challenge.choices.map((choice, i) => {
           let state = 'default';
-          if (mySubmitted && myChoiceIndex === i) state = 'selected';
+          if (myChoiceIndex === i) state = 'selected';
           const locked = leaderLocked || mySubmitted || submitting;
           return (
             <AnswerCard

@@ -443,12 +443,11 @@ declare
   room_rec record;
   round_rec record;
   player_rec record;
-  secret int;
-  choices jsonb;
-  choice_text text;
-  correct boolean;
-  score_delta int := 0;
-  active_size int;
+  v_secret int;
+  v_choices jsonb;
+  v_choice_text text;
+  v_correct boolean;
+  v_score_delta int := 0;
   pred_rec record;
 begin
   perform public.assert_true(v_uid is not null, 'لازم تسجل دخول الأول.');
@@ -471,50 +470,49 @@ begin
    from public.room_players where room_id=p_room_id and user_id=v_uid;
   perform public.assert_true(player_rec.user_id is not null, 'أنت مش في الغرفة.');
   perform public.assert_true(player_rec.team = room_rec.active_team, 'الفريق التاني مش بيجاوب.');
-  select count(*) into active_size from public.room_players
-   where room_id=p_room_id and team=room_rec.active_team;
-  perform public.assert_true(not (v_uid = room_rec.leader_id and active_size > 1), 'انت القائد — متختارش نيابة عن الفريق.');
+  -- The leader/clue-giver is NEVER allowed to submit an answer, even when alone.
+  perform public.assert_true(not (v_uid = room_rec.leader_id), 'انت القائد — متختارش نيابة عن الفريق.');
   -- prevent duplicate answer submission
     if room_rec.selected_choice_index is not null then
     perform public.assert_true(false, 'الإجابة اتسجلت قبل كده — ممنوع تكرر.');
   end if;
 
   -- read the protected correct answer (challenge_secrets is never readable by clients)
-  select correct_index into secret from public.challenge_secrets where challenge_id = room_rec.challenge_id;
-  perform public.assert_true(secret is not null, 'الإجابة السرية مش موجودة — اتصل بالأدمن.');
-  select choices into choices from public.challenges where id = room_rec.challenge_id;
-  choice_text := choices[p_choice_index + 1];
-  correct := (p_choice_index = secret);
-  score_delta := case when correct then 100 else 0 end;
+  select correct_index into v_secret from public.challenge_secrets where challenge_id = room_rec.challenge_id;
+  perform public.assert_true(v_secret is not null, 'الإجابة السرية مش موجودة — اتصل بالأدمن.');
+  select choices into v_choices from public.challenges where id = room_rec.challenge_id;
+  v_choice_text := v_choices ->> p_choice_index;
+  v_correct := (p_choice_index = v_secret);
+  v_score_delta := case when v_correct then 100 else 0 end;
 
   update public.rounds
-     set status='revealed', selected_choice_index=p_choice_index, selected_answer=choice_text,
-         submitted_by=v_uid, correct_index=secret,
-         correct_answer=choices[secret+1],
-         result = case when correct then 'correct' else 'incorrect' end,
-         score_delta=score_delta, answered_at=now()
+     set status='revealed', selected_choice_index=p_choice_index, selected_answer=v_choice_text,
+         submitted_by=v_uid, correct_index=v_secret,
+         correct_answer=v_choices ->> v_secret,
+         result = case when v_correct then 'correct' else 'incorrect' end,
+         score_delta=v_score_delta, answered_at=now()
    where id = p_round_id;
 
   if room_rec.active_team='red' then
-    update public.rooms set red_score = red_score + score_delta where id=p_room_id;
+    update public.rooms set red_score = red_score + v_score_delta where id=p_room_id;
   else
-    update public.rooms set blue_score = blue_score + score_delta where id=p_room_id;
+    update public.rooms set blue_score = blue_score + v_score_delta where id=p_room_id;
   end if;
 
-  update public.room_players set score = score + score_delta, online=true
+  update public.room_players set score = score + v_score_delta, online=true
    where room_id=p_room_id and user_id=v_uid;
 
   -- reward correct predictions of the OPPOSITE team (20 points each)
   for pred_rec in
     select user_id, choice_index from public.predictions where round_id=p_round_id
   loop
-    if pred_rec.choice_index = secret then
+    if pred_rec.choice_index = v_secret then
       update public.room_players set score = score + 20
        where room_id=p_room_id and user_id=pred_rec.user_id;
     end if;
   end loop;
 
-  return jsonb_build_object('correct', correct, 'correct_index', secret, 'score_delta', score_delta);
+  return jsonb_build_object('correct', v_correct, 'correct_index', v_secret, 'score_delta', v_score_delta);
 end $$;
 
 
@@ -523,25 +521,25 @@ returns table(ok boolean) language plpgsql security definer set search_path = pu
 $$
 declare
   v_uid uuid := auth.uid();
-  r record;
+  v_r record;
 begin
   perform public.assert_true(v_uid is not null, 'لازم تسجل دخول الأول.');
   perform public.assert_true(p_choice_index is not null and p_choice_index between 0 and 3, 'اختيار غير صحيح.');
 
   select room.status, room.round_id, r.active_team, r.status as rstatus
-    into r
+    into v_r
   from public.rooms room
   join public.rounds r on r.id = p_round_id and r.room_id = room.id
   where room.id = p_room_id;
-  perform public.assert_true(r.rstatus is not null, 'مفيش جولة.');
-  perform public.assert_true(r.status='playing', 'اللعبة مش شغالة.');
-  perform public.assert_true(r.round_id = p_round_id, 'دي مش الجولة الحالية.');
-  perform public.assert_true(r.rstatus='clue_submitted', 'التوقع متاح بس في وقت الإجابة.');
+  perform public.assert_true(v_r.rstatus is not null, 'مفيش جولة.');
+  perform public.assert_true(v_r.status='playing', 'اللعبة مش شغالة.');
+  perform public.assert_true(v_r.round_id = p_round_id, 'دي مش الجولة الحالية.');
+  perform public.assert_true(v_r.rstatus='clue_submitted', 'التوقع متاح بس في وقت الإجابة.');
 
   -- Only the OPPOSITE team can predict.
   perform public.assert_true(
     exists (select 1 from public.room_players
-             where room_id=p_room_id and user_id=v_uid and team <> r.active_team),
+             where room_id=p_room_id and user_id=v_uid and team <> v_r.active_team),
     'الفريق اللي عليه الدور مش بيعمل توقعات.');
 
   perform public.assert_true(

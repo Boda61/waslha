@@ -30,10 +30,12 @@ export default function GameScreen({
   const [answerSubmitting, setAnswerSubmitting] = useState(false);
   const [predictionSubmitting, setPredictionSubmitting] = useState(false);
   const [expired, setExpired] = useState(false);
+  const [pendingChoice, setPendingChoice] = useState(null);
 
   // Reset local submission state when a new round starts.
   useEffect(() => {
     setExpired(false);
+    setPendingChoice(null);
   }, [round?.id]);
 
   if (!room || !round || !challenge || !myPlayer) {
@@ -61,7 +63,9 @@ export default function GameScreen({
   // Authoritative persisted answer state (survives refresh).
   const persistedChoiceIndex = round.selectedChoiceIndex;
   const mySubmitted = round.submittedBy === myUid;
-  const myChoiceIndex = mySubmitted ? persistedChoiceIndex : null;
+  // Optimistic: show the clicked choice immediately while the RPC is in flight.
+  const hasChosen = mySubmitted || pendingChoice !== null;
+  const myChoiceIndex = mySubmitted ? persistedChoiceIndex : pendingChoice;
 
   const redMembers = players.filter((p) => p.team === 'red');
   const blueMembers = players.filter((p) => p.team === 'blue');
@@ -76,10 +80,13 @@ export default function GameScreen({
   };
 
   const handleAnswer = async (choiceIndex) => {
-    if (answerSubmitting || mySubmitted) return;
+    if (answerSubmitting || hasChosen) return;
+    setPendingChoice(choiceIndex);
     setAnswerSubmitting(true);
     try {
       await onSubmitAnswer(choiceIndex);
+    } catch {
+      setPendingChoice(null);
     } finally {
       setAnswerSubmitting(false);
     }
@@ -132,7 +139,7 @@ export default function GameScreen({
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-night-800 px-6 py-16 text-center">
             <span className="text-5xl">🕵️</span>
             <p className="text-lg font-bold text-white">القائد بيشوف الصورتين وبيكتب التلميح...</p>
-            <p className="text-sm text-slate-400">معلش كلمتين وبيوصّلنا 😄</p>
+            <p className="text-sm text-slate-400">  متبقاش مستعجل اصبر... 😄</p>
           </div>
         );
       }
@@ -143,7 +150,7 @@ export default function GameScreen({
           round={round}
           isLeader={isLeader}
           leaderLocked={leaderLocked}
-          mySubmitted={mySubmitted}
+          mySubmitted={hasChosen}
           myChoiceIndex={myChoiceIndex}
           onAnswer={handleAnswer}
           submitting={answerSubmitting}

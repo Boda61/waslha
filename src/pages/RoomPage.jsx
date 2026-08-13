@@ -128,9 +128,33 @@ export default function RoomPage() {
     }
   };
 
-  const handleSubmitClue = (clue) => submitClue(roomId, room.roundId, clue);
-  const handleSubmitAnswer = (choiceIndex) => submitAnswer(roomId, room.roundId, choiceIndex);
-  const handleSubmitPrediction = (choiceIndex) => submitPrediction(roomId, room.roundId, choiceIndex);
+  const handleSubmitClue = async (clue) => {
+    try {
+      await submitClue(roomId, room.roundId, clue);
+    } catch (err) {
+      console.error('submit_clue error:', err);
+      push(err.message, 'error');
+    }
+  };
+
+  const handleSubmitAnswer = async (choiceIndex) => {
+    try {
+      await submitAnswer(roomId, room.roundId, choiceIndex);
+    } catch (err) {
+      console.error('submit_answer error:', err);
+      push(err.message, 'error');
+      throw err;
+    }
+  };
+
+  const handleSubmitPrediction = async (choiceIndex) => {
+    try {
+      await submitPrediction(roomId, room.roundId, choiceIndex);
+    } catch (err) {
+      console.error('submit_prediction error:', err);
+      push(err.message, 'error');
+    }
+  };
   const handleNextRound = async () => {
     try {
       await nextRound(roomId, room.roundId);
