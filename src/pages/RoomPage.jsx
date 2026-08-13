@@ -102,7 +102,7 @@ export default function RoomPage() {
   }, [round?.challengeId]);
 
   const myPlayer = user ? players.find((p) => p.userId === user.id) : null;
-  const isHost = !!room && room.hostId === user?.uid;
+  const isHost = !!room && room.hostId === user?.id;
 
   const handleLeave = useCallback(async () => {
     try {

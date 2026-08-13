@@ -83,7 +83,7 @@ export default function Lobby({
                   <PlayerCard
                     key={p.userId}
                     player={p}
-                    isMe={p.userId === myPlayer?.id}
+                    isMe={p.userId === myPlayer?.userId}
                     isHost={p.userId === room.hostId}
                   />
                 ))}
