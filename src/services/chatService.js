@@ -45,7 +45,7 @@ export async function sendMessage(roomId, roundId, sender, text) {
   const { error } = await supabase.from('messages').insert([{
     room_id: roomId,
     round_id: roundId,
-    sender_id: sender.uid,
+    sender_id: sender.userId,
     sender_name: sender.username || 'لاعب',
     avatar: sender.avatar || '🦁',
     team: sender.team || null,

@@ -46,7 +46,7 @@ export default function GameOverModal({ room, players }) {
             </thead>
             <tbody className="divide-y divide-white/5">
               {sortPlayers.map((p, i) => (
-                <tr key={p.id} className={i === 0 ? 'bg-gold-500/10' : ''}>
+                <tr key={p.userId} className={i === 0 ? 'bg-gold-500/10' : ''}>
                   <td className="px-3 py-2 text-right">
                     <span className="ml-1">{i + 1 === 1 ? '🥇' : i + 1 === 2 ? '🥈' : i + 1 === 3 ? '🥉' : ''}</span>
                     {p.avatar} {p.username}

@@ -37,6 +37,7 @@ export default function RoomPage() {
   const [challenge, setChallenge] = useState(null);
   const [predictions, setPredictions] = useState([]);
   const [notFound, setNotFound] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   // Listeners
   useEffect(() => {
@@ -105,14 +106,16 @@ export default function RoomPage() {
   const isHost = !!room && room.hostId === user?.id;
 
   const handleLeave = useCallback(async () => {
+    if (leaving) return;
+    setLeaving(true);
     try {
       await leaveRoom(roomId);
+      navigate('/');
     } catch (err) {
       push(err.message, 'error');
-    } finally {
-      navigate('/');
+      setLeaving(false);
     }
-  }, [roomId, navigate, push]);
+  }, [roomId, navigate, push, leaving]);
 
   const handleSetTeam = (team) => setTeam(roomId, team);
   const handleSetReady = (ready) => setReady(roomId, ready);
@@ -214,6 +217,8 @@ export default function RoomPage() {
       onSubmitAnswer={handleSubmitAnswer}
       onSubmitPrediction={handleSubmitPrediction}
       onNextRound={handleNextRound}
+      onLeave={handleLeave}
+      leaving={leaving}
     />
   );
 }

@@ -3,6 +3,7 @@ import Scoreboard from '../../components/Scoreboard.jsx';
 import ChatPanel from '../../components/ChatPanel.jsx';
 import TeamBadge from '../../components/TeamBadge.jsx';
 import Timer from '../../components/Timer.jsx';
+import PlayerCard from '../../components/PlayerCard.jsx';
 import LeaderPanel from './LeaderPanel.jsx';
 import ActiveTeamPanel from './ActiveTeamPanel.jsx';
 import OpponentView from './OpponentView.jsx';
@@ -21,6 +22,8 @@ export default function GameScreen({
   onSubmitAnswer,
   onSubmitPrediction,
   onNextRound,
+  onLeave,
+  leaving,
 }) {
   const [clueSubmitting, setClueSubmitting] = useState(false);
   const [answerSubmitting, setAnswerSubmitting] = useState(false);
@@ -41,7 +44,7 @@ export default function GameScreen({
   }
 
   const activeTeam = round.activeTeam;
-  const myUid = myPlayer.uid;
+  const myUid = myPlayer.userId;
   const myTeam = myPlayer.team;
   const leaderId = round.leaderId;
   const isLeader = myUid === leaderId;
@@ -50,9 +53,13 @@ export default function GameScreen({
   const ended = room.status === 'ended';
   const activeTeamSize = players.filter((p) => p.team === activeTeam).length;
   const leaderLocked = isLeader && activeTeamSize > 1;
-  const leaderName = players.find((p) => p.id === leaderId)?.username || 'القائد';
-  const myPrediction = predictions.find((p) => p.id === myUid)?.choiceIndex;
+  const leaderPlayer = players.find((p) => p.userId === leaderId);
+  const leaderName = leaderPlayer?.username || 'القائد';
+  const myPrediction = predictions.find((p) => p.userId === myUid)?.choiceIndex;
   const canChat = !revealed && isActiveTeamMember && round.status === 'clue_submitted';
+
+  const redMembers = players.filter((p) => p.team === 'red');
+  const blueMembers = players.filter((p) => p.team === 'blue');
 
   const handleClue = async (clue) => {
     setClueSubmitting(true);
@@ -142,11 +149,55 @@ export default function GameScreen({
     );
   };
 
+  const teamSection = (teamId) => {
+    const members = teamId === 'red' ? redMembers : blueMembers;
+    return (
+      <section
+        className={`rounded-2xl border-2 p-3 ${
+          teamId === 'red'
+            ? 'border-rose-500/20 bg-rose-500/5'
+            : 'border-sky-500/20 bg-sky-500/5'
+        }`}
+      >
+        <div className="mb-2 flex items-center justify-between">
+          <TeamBadge teamId={teamId} size="lg" />
+          <span className="text-xs text-slate-400">{members.length} لاعب</span>
+        </div>
+        <div className="space-y-2">
+          {members.length === 0 && (
+            <p className="rounded-xl bg-night-800/60 px-3 py-3 text-center text-xs text-slate-500">
+              الفريق فاضي — لسه في مكان 🪑
+            </p>
+          )}
+          {members.map((p) => (
+            <PlayerCard
+              key={p.userId}
+              player={p}
+              isMe={p.userId === myUid}
+              isHost={room.hostId === p.userId}
+            />
+          ))}
+        </div>
+      </section>
+    );
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       {/* Scoreboard */}
       <div className="mb-4">
         <Scoreboard room={room} />
+      </div>
+
+      {/* Leave button */}
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={onLeave}
+          disabled={leaving}
+          className="rounded-xl border border-rose-500/40 px-4 py-2 text-sm font-bold text-rose-300 transition hover:bg-rose-500/10 disabled:opacity-50"
+        >
+          {leaving ? '...' : 'خروج من اللعبة'}
+        </button>
       </div>
 
       {/* Status bar */}
@@ -161,7 +212,11 @@ export default function GameScreen({
         </div>
         <div className="flex items-center gap-3">
           {!revealed && !ended && (
-            <Timer seconds={TIMERS.answerSeconds} key={round.id} />
+            <Timer
+              deadline={round.endsAt}
+              durationSeconds={TIMERS.answerSeconds}
+              key={round.id}
+            />
           )}
           {revealed && (
             <span className="rounded-full bg-gold-500/20 px-3 py-1 text-sm font-bold text-gold-300">
@@ -169,6 +224,12 @@ export default function GameScreen({
             </span>
           )}
         </div>
+      </div>
+
+      {/* Teams */}
+      <div className="mb-4 grid gap-4 sm:grid-cols-2">
+        {teamSection('red')}
+        {teamSection('blue')}
       </div>
 
       {/* Main + Chat */}
@@ -198,4 +259,3 @@ export default function GameScreen({
     </div>
   );
 }
-

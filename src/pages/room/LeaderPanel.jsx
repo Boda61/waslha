@@ -31,8 +31,8 @@ export default function LeaderPanel({ challenge, onClue, submitting }) {
       </header>
 
       <div className="grid grid-cols-2 gap-4">
-        {imageCard(challenge.imageA.emoji, challenge.imageA.label, 'bg-gradient-to-br from-rose-500/20 to-orange-500/10')}
-        {imageCard(challenge.imageB.emoji, challenge.imageB.label, 'bg-gradient-to-br from-sky-500/20 to-indigo-500/10')}
+        {imageCard(challenge.imageAEmoji, challenge.imageALabel, 'bg-gradient-to-br from-rose-500/20 to-orange-500/10')}
+        {imageCard(challenge.imageBEmoji, challenge.imageBLabel, 'bg-gradient-to-br from-sky-500/20 to-indigo-500/10')}
       </div>
 
       <form onSubmit={handleSubmit} className="mt-6">

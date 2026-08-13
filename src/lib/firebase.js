@@ -9,7 +9,7 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   // Fail fast with a clear developer message instead of a cryptic runtime error.
-  // eslint-disable-next-line no-console
+  // console.error is intentional here — there is no user-facing UI at this point.
   console.error('Supabase env vars missing — check VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY');
 }
 
