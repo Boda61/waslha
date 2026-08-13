@@ -40,6 +40,10 @@ export default function RoomPage() {
 
   // Listeners
   useEffect(() => {
+    if (!roomId) {
+      setNotFound(true);
+      return undefined;
+    }
     const unsubRoom = subscribeRoom(
       roomId,
       (r) => {
@@ -62,9 +66,9 @@ export default function RoomPage() {
   // Presence
   useEffect(() => {
     if (!user) return undefined;
-    setOnline(roomId, user.uid, true).catch(() => {});
+    setOnline(roomId, user.id, true).catch(() => {});
     const onUnload = () => {
-      setOnline(roomId, user.uid, false).catch(() => {});
+      setOnline(roomId, user.id, false).catch(() => {});
     };
     window.addEventListener('beforeunload', onUnload);
     return () => {
@@ -97,7 +101,7 @@ export default function RoomPage() {
     return subscribeChallenge(round.challengeId, setChallenge);
   }, [round?.challengeId]);
 
-  const myPlayer = user ? players.find((p) => p.id === user.uid) : null;
+  const myPlayer = user ? players.find((p) => p.userId === user.id) : null;
   const isHost = !!room && room.hostId === user?.uid;
 
   const handleLeave = useCallback(async () => {
@@ -137,6 +141,23 @@ export default function RoomPage() {
         <span className="text-6xl">🚪</span>
         <h1 className="mt-4 text-2xl font-black text-white">الغرفة دي مش موجودة</h1>
         <p className="mt-2 text-slate-400">يمكن الغرفة خلصت أو اتلغت.</p>
+        <button
+          onClick={() => navigate('/')}
+          className="mt-6 rounded-xl bg-brand-500 px-6 py-3 font-bold text-night-950 hover:bg-brand-400"
+        >
+          ارجع للرئيسية
+        </button>
+      </div>
+    );
+  }
+
+  // Invalid or missing room ID
+  if (!roomId) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <span className="text-6xl">❌</span>
+        <h1 className="mt-4 text-2xl font-black text-white">معرّف الغرفة غير صحيح</h1>
+        <p className="mt-2 text-slate-400">الكود ده مش متاح. تأكد من رابط الغرفة.</p>
         <button
           onClick={() => navigate('/')}
           className="mt-6 rounded-xl bg-brand-500 px-6 py-3 font-bold text-night-950 hover:bg-brand-400"

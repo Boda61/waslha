@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/firebase.js';
+import { useLoading } from './LoadingContext.jsx';
 
 const AuthContext = createContext(null);
 
@@ -8,6 +9,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null); // public.profiles row
   const [initializing, setInitializing] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const { completeInitialization } = useLoading();
 
   // Restore / track session on mount.
   useEffect(() => {
@@ -23,6 +25,7 @@ export function AuthProvider({ children }) {
         setUser(session?.user ?? null);
       }
       setInitializing(false);
+      completeInitialization();
     };
 
     getSession();
@@ -42,7 +45,7 @@ export function AuthProvider({ children }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [completeInitialization]);
 
   // Subscribe to the profile row with a realtime listener.
   useEffect(() => {

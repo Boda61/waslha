@@ -81,10 +81,10 @@ export default function Lobby({
                 .filter((p) => p.team === tid)
                 .map((p) => (
                   <PlayerCard
-                    key={p.id}
+                    key={p.userId}
                     player={p}
-                    isMe={p.id === myPlayer?.uid}
-                    isHost={p.id === room.hostId}
+                    isMe={p.userId === myPlayer?.id}
+                    isHost={p.userId === room.hostId}
                   />
                 ))}
             </div>

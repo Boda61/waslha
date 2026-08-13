@@ -16,18 +16,21 @@ export async function joinRoom(code) {
 }
 
 export async function setTeam(roomId, team) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
   const { data, error } = await supabase.rpc('set_team', { p_room_id: roomId, p_team: team });
   if (error) throw new Error(friendlyError(error, 'مش قدرنا نغيّر الفريق.'));
   return camelcaseKeys(data?.[0]);
 }
 
 export async function setReady(roomId, ready) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
   const { data, error } = await supabase.rpc('set_ready', { p_room_id: roomId, p_ready: ready });
   if (error) throw new Error(friendlyError(error, 'مش قدرنا نحدّث الحالة.'));
   return camelcaseKeys(data?.[0]);
 }
 
 export async function leaveRoom(roomId) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
   const { error } = await supabase.rpc('leave_room', { p_room_id: roomId });
   if (error) throw new Error(friendlyError(error, 'مش قدرنا نخرج من الغرفة.'));
   return true;
@@ -35,6 +38,8 @@ export async function leaveRoom(roomId) {
 
 // Online flag — clients write only their own row (RLS-enforced).
 export async function setOnline(roomId, uid, online) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  if (!uid) throw new Error('معرّف المستخدم مفقود.');
   const { error } = await supabase
     .from('room_players')
     .update({ online })
@@ -48,6 +53,11 @@ export async function setOnline(roomId, uid, online) {
 
 // Room row realtime.
 export function subscribeRoom(roomId, onData, onError) {
+  if (!roomId) {
+    onError?.(new Error('معرّف الغرفة مفقود.'));
+    return () => {};
+  }
+
   const channel = supabase
     .channel(`public:rooms:id=${roomId}`)
     .on(
@@ -83,6 +93,11 @@ export function subscribeRoom(roomId, onData, onError) {
 
 // Players in a room realtime.
 export function subscribePlayers(roomId, onData) {
+  if (!roomId) {
+    onData([]);
+    return () => {};
+  }
+
   const channel = supabase
     .channel(`public:room_players:room_id=eq.${roomId}`)
     .on(
