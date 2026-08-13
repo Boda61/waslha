@@ -4,8 +4,7 @@ import { useToast } from '../contexts/ToastContext.jsx';
 import { register } from '../services/authService.js';
 import { AVATARS } from '../utils/constants.js';
 
-const GAMER_NAMES = ['الجوكر', 'الدنجل', 'الزعيم', 'الفارس', 'المايسترو', 'الصاروخ'];
-
+const GAMER_NAMES = ['الجوكر', 'الدنجل', 'الزعيم', 'الفارس', 'المايسترو', 'الصاروخ', 'البركان', 'النينجا', 'القرصان', 'الوحش', 'الأسطورة', 'المحارب', 'الملك', 'العبيط', 'الساحر', 'الذئب', 'النمر', 'الصقر', 'الثعلب', 'الديناصور'];
 export default function Register() {
   const navigate = useNavigate();
   const { push } = useToast();
@@ -37,7 +36,7 @@ export default function Register() {
     try {
       await register({ email, password, username: username.trim(), avatar });
     } catch (err) {
-      setError(err.message || 'مش قدرنا نسجّل الحساب.');
+      setError(err.message || 'مش قادرين نسجّل الحساب.');
       setLoading(false);
       return;
     }
@@ -49,7 +48,7 @@ export default function Register() {
     <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-10">
       <div className="glass rounded-3xl p-8">
         <h1 className="text-center text-3xl font-black text-white">اعمل حساب</h1>
-        <p className="mt-2 text-center text-sm text-slate-400">مجاناً وبلاش 🔥</p>
+        <p className="mt-2 text-center text-sm text-slate-400"> بسرعه مفيش وقت 🔥</p>
 
         {error && (
           <p className="mt-4 rounded-xl bg-rose-500/15 px-4 py-3 text-sm font-semibold text-rose-300">

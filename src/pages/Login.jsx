@@ -23,7 +23,7 @@ export default function Login() {
     try {
       await login(email, password);
     } catch (err) {
-      setError(friendlyError(err, 'مش قدرنا ندخلك. اتأكد من البيانات.'));
+      setError(friendlyError(err, ' اتأكد من البيانات.يا غبي 😂'));
       setLoading(false);
       return;
     }
