@@ -1,0 +1,201 @@
+import { useEffect, useState } from 'react';
+import Scoreboard from '../../components/Scoreboard.jsx';
+import ChatPanel from '../../components/ChatPanel.jsx';
+import TeamBadge from '../../components/TeamBadge.jsx';
+import Timer from '../../components/Timer.jsx';
+import LeaderPanel from './LeaderPanel.jsx';
+import ActiveTeamPanel from './ActiveTeamPanel.jsx';
+import OpponentView from './OpponentView.jsx';
+import RoundResultModal from './RoundResultModal.jsx';
+import GameOverModal from './GameOverModal.jsx';
+import { TIMERS, TOTAL_ROUNDS } from '../../utils/constants.js';
+
+export default function GameScreen({
+  room,
+  players,
+  round,
+  challenge,
+  predictions,
+  myPlayer,
+  onSubmitClue,
+  onSubmitAnswer,
+  onSubmitPrediction,
+  onNextRound,
+}) {
+  const [clueSubmitting, setClueSubmitting] = useState(false);
+  const [answerSubmitting, setAnswerSubmitting] = useState(false);
+  const [predictionSubmitting, setPredictionSubmitting] = useState(false);
+  const [submittedChoice, setSubmittedChoice] = useState(null);
+
+  // Reset local submission state when a new round starts.
+  useEffect(() => {
+    setSubmittedChoice(null);
+  }, [round?.id]);
+
+  if (!room || !round || !challenge || !myPlayer) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center text-slate-400">
+        بنجهز الجولة...
+      </div>
+    );
+  }
+
+  const activeTeam = round.activeTeam;
+  const myUid = myPlayer.uid;
+  const myTeam = myPlayer.team;
+  const leaderId = round.leaderId;
+  const isLeader = myUid === leaderId;
+  const isActiveTeamMember = myTeam === activeTeam;
+  const revealed = round.status === 'revealed';
+  const ended = room.status === 'ended';
+  const activeTeamSize = players.filter((p) => p.team === activeTeam).length;
+  const leaderLocked = isLeader && activeTeamSize > 1;
+  const leaderName = players.find((p) => p.id === leaderId)?.username || 'القائد';
+  const myPrediction = predictions.find((p) => p.id === myUid)?.choiceIndex;
+  const canChat = !revealed && isActiveTeamMember && round.status === 'clue_submitted';
+
+  const handleClue = async (clue) => {
+    setClueSubmitting(true);
+    try {
+      await onSubmitClue(clue);
+    } finally {
+      setClueSubmitting(false);
+    }
+  };
+
+  const handleAnswer = async (choiceIndex) => {
+    if (answerSubmitting) return;
+    setAnswerSubmitting(true);
+    setSubmittedChoice(choiceIndex);
+    try {
+      await onSubmitAnswer(choiceIndex);
+    } catch (err) {
+      setSubmittedChoice(null);
+      throw err;
+    } finally {
+      setAnswerSubmitting(false);
+    }
+  };
+
+  const handlePrediction = async (choiceIndex) => {
+    if (predictionSubmitting) return;
+    setPredictionSubmitting(true);
+    try {
+      await onSubmitPrediction(choiceIndex);
+    } finally {
+      setPredictionSubmitting(false);
+    }
+  };
+
+  const renderMain = () => {
+    if (revealed || ended) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-4 py-16 text-center">
+          <span className="text-5xl animate-pulse">🎬</span>
+          <p className="text-xl font-bold text-white">
+            {revealed ? 'النتيجة...' : 'اللعبة خلصت'}
+          </p>
+        </div>
+      );
+    }
+
+    if (isActiveTeamMember) {
+      if (round.status === 'leader') {
+        if (isLeader) {
+          return <LeaderPanel challenge={challenge} onClue={handleClue} submitting={clueSubmitting} />;
+        }
+        return (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-night-800 px-6 py-16 text-center">
+            <span className="text-5xl">🕵️</span>
+            <p className="text-lg font-bold text-white">القائد بيشوف الصورتين وبيكتب التلميح...</p>
+            <p className="text-sm text-slate-400">معلش كلمتين وبيوصّلنا 😄</p>
+          </div>
+        );
+      }
+      // clue_submitted
+      return (
+        <ActiveTeamPanel
+          challenge={challenge}
+          round={round}
+          isLeader={isLeader}
+          leaderLocked={leaderLocked}
+          mySubmitted={submittedChoice !== null}
+          myChoiceIndex={submittedChoice}
+          onAnswer={handleAnswer}
+          submitting={answerSubmitting}
+        />
+      );
+    }
+
+    // opponent team
+    return (
+      <OpponentView
+        challenge={challenge}
+        round={round}
+        activeTeam={activeTeam}
+        leaderName={leaderName}
+        myPrediction={myPrediction}
+        onPrediction={handlePrediction}
+        submitting={predictionSubmitting}
+        revealed={revealed}
+      />
+    );
+  };
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-6">
+      {/* Scoreboard */}
+      <div className="mb-4">
+        <Scoreboard room={room} />
+      </div>
+
+      {/* Status bar */}
+      <div className="glass mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="rounded-lg bg-night-700 px-3 py-1 text-sm font-bold text-white">
+            جولة {Math.min(room.currentRound, TOTAL_ROUNDS)} / {TOTAL_ROUNDS}
+          </span>
+          <span className="flex items-center gap-2 text-sm text-slate-300">
+            الدور على <TeamBadge teamId={activeTeam} />
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          {!revealed && !ended && (
+            <Timer seconds={TIMERS.answerSeconds} key={round.id} />
+          )}
+          {revealed && (
+            <span className="rounded-full bg-gold-500/20 px-3 py-1 text-sm font-bold text-gold-300">
+              نتيجة الجولة 🎬
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Main + Chat */}
+      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+        <div className="rounded-2xl border border-white/10 bg-night-900/40 p-4 sm:p-6">
+          {myPlayer.team ? (
+            renderMain()
+          ) : (
+            <p className="py-16 text-center text-slate-400">مفيش فريق لسه...</p>
+          )}
+        </div>
+
+        <div className="h-[420px] lg:h-[560px]">
+          <ChatPanel
+            roomId={room.id}
+            roundId={round.id}
+            canChat={canChat}
+            currentPlayer={myPlayer}
+          />
+        </div>
+      </div>
+
+      {revealed && !ended && (
+        <RoundResultModal round={round} isHost={room.hostId === myUid} onNextRound={onNextRound} />
+      )}
+      {ended && <GameOverModal room={room} players={players} />}
+    </div>
+  );
+}
+

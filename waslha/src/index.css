@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Cairo", ui-sans-serif, system-ui, sans-serif;
+
+  --color-night-950: #070b14;
+  --color-night-900: #0b1120;
+  --color-night-800: #111a2e;
+  --color-night-700: #1a2740;
+  --color-night-600: #24324f;
+
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+
+  --color-gold-300: #fde68a;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
+
+  --animate-fade-up: fade-up 0.5s ease both;
+  --animate-pop: pop 0.35s ease both;
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pop {
+    0% { opacity: 0; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-night-950);
+  color: #f1f5f9;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Premium cinematic glow background */
+.game-bg {
+  background:
+    radial-gradient(1200px 600px at 90% -10%, rgba(20, 184, 166, 0.16), transparent 60%),
+    radial-gradient(1000px 500px at 0% 110%, rgba(245, 158, 11, 0.12), transparent 60%),
+    #070b14;
+}
+
+.glass {
+  background: rgba(17, 26, 46, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.text-glow {
+  text-shadow: 0 0 24px rgba(45, 212, 191, 0.55);
+}
+
+/* Custom scrollbar for chat */
+.chat-scroll::-webkit-scrollbar { width: 6px; }
+.chat-scroll::-webkit-scrollbar-thumb { background: #24324f; border-radius: 4px; }
+.chat-scroll::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
