@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useToast } from '../contexts/ToastContext.jsx';
 import Avatar from '../components/Avatar.jsx';
@@ -8,6 +9,15 @@ import { AVATARS } from '../utils/constants.js';
 export default function Profile() {
   const { user, profile } = useAuth();
   const { push } = useToast();
+  const navigate = useNavigate();
+
+  const goBack = () => {
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
   const [username, setUsername] = useState(profile?.username || '');
   const [savingName, setSavingName] = useState(false);
   const [savingAvatar, setSavingAvatar] = useState(false);
@@ -44,6 +54,15 @@ export default function Profile() {
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10">
+      <div className="mb-4 flex justify-start">
+        <button
+          onClick={goBack}
+          className="flex items-center gap-2 rounded-xl border border-white/10 bg-night-800 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-night-700 hover:text-white"
+        >
+          <span className="text-lg leading-none">→</span>
+          رجوع
+        </button>
+      </div>
       <div className="glass rounded-3xl p-8 text-center">
         <h1 className="text-3xl font-black text-white">بروفايلك</h1>
         <p className="mt-1 text-sm text-slate-400">{user?.email}</p>
