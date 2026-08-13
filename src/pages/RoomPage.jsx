@@ -21,6 +21,7 @@ import {
   submitAnswer,
   submitPrediction,
   nextRound,
+  expireRound,
   subscribePredictions,
 } from '../services/gameService.js';
 import { ROOM_STATUS } from '../utils/constants.js';
@@ -138,6 +139,14 @@ export default function RoomPage() {
     }
   };
 
+  const handleExpireRound = async () => {
+    try {
+      await expireRound(roomId, room.roundId);
+    } catch (err) {
+      push(err.message, 'error');
+    }
+  };
+
   if (notFound) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
@@ -217,6 +226,7 @@ export default function RoomPage() {
       onSubmitAnswer={handleSubmitAnswer}
       onSubmitPrediction={handleSubmitPrediction}
       onNextRound={handleNextRound}
+      onExpireRound={handleExpireRound}
       onLeave={handleLeave}
       leaving={leaving}
     />

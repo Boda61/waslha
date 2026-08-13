@@ -31,7 +31,8 @@ export async function submitAnswer(roomId, roundId, choiceIndex) {
     p_choice_index: choiceIndex,
   });
   if (error) throw new Error(friendlyError(error, 'مش قدرنا نسجّل الإجابة.'));
-  return camelcaseKeys(data?.[0]);
+  // submit_answer returns a jsonb object (not a table row), so `data` is the object.
+  return camelcaseKeys(data);
 }
 
 export async function submitPrediction(roomId, roundId, choiceIndex) {
@@ -43,6 +44,20 @@ export async function submitPrediction(roomId, roundId, choiceIndex) {
     p_choice_index: choiceIndex,
   });
   if (error) throw new Error(friendlyError(error, 'مش قدرنا نسجّل التوقع.'));
+  return camelcaseKeys(data?.[0]);
+}
+
+// Authoritative server-side timer expiration.
+// Any room member may call it; it only succeeds when the persisted
+// deadline has actually passed, then it advances the game.
+export async function expireRound(roomId, roundId) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  if (!roundId) throw new Error('معرّف الجولة مفقود.');
+  const { data, error } = await supabase.rpc('expire_round', {
+    p_room_id: roomId,
+    p_round_id: roundId,
+  });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا ننهي الجولة.'));
   return camelcaseKeys(data?.[0]);
 }
 

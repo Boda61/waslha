@@ -125,9 +125,8 @@ begin
    from public.room_players where room_id=p_room_id and user_id=v_uid;
   perform public.assert_true(player_rec.user_id is not null, 'أنت مش في الغرفة.');
   perform public.assert_true(player_rec.team = room_rec.active_team, 'الفريق التاني مش بيجاوب.');
-  select count(*) into active_size from public.room_players
-   where room_id=p_room_id and team=room_rec.active_team;
-  perform public.assert_true(not (v_uid = room_rec.leader_id and active_size > 1), 'انت القائد — متختارش نيابة عن الفريق.');
+  -- The leader/clue-giver is NEVER allowed to submit an answer, even when alone.
+  perform public.assert_true(not (v_uid = room_rec.leader_id), 'انت القائد — متختارش نيابة عن الفريق.');
   -- prevent duplicate answer submission
     if room_rec.selected_choice_index is not null then
     perform public.assert_true(false, 'الإجابة اتسجلت قبل كده — ممنوع تكرر.');
@@ -211,6 +210,81 @@ begin
 
   return query select true;
 end $$;
+
+-- 6) expire_round: authoritative server-side timer expiration.
+--    Any room member may call it; it only succeeds when the persisted
+--    deadline has actually passed, then it advances the game exactly
+--    like next_round (switch team or end the game).
+create or replace function public.expire_round(p_room_id uuid, p_round_id uuid)
+returns table(ok boolean) language plpgsql security definer set search_path = public as
+$$
+declare
+  v_uid uuid := auth.uid();
+  r record;
+  rec record;
+  next_team text;
+  red int;
+  blue int;
+  winner text;
+  winner_name text;
+begin
+  perform public.assert_true(v_uid is not null, 'لازم تسجل دخول الأول.');
+
+  select room.status, room.round_id, room.current_round, room.current_turn_team,
+         room.red_score, room.blue_score,
+         round.status as rstatus, round.ends_at
+    into r
+  from public.rooms room
+  join public.rounds round on round.id = p_round_id and round.room_id = room.id
+  where room.id = p_room_id;
+
+  perform public.assert_true(r.rstatus is not null, 'مفيش جولة.');
+  perform public.assert_true(r.status = 'playing', 'اللعبة مش شغالة.');
+  perform public.assert_true(r.round_id = p_round_id, 'دي مش الجولة الحالية.');
+  perform public.assert_true(r.rstatus <> 'revealed', 'الجولة دي خلصت بالفعل.');
+  -- Authoritative: only allow expiration when the persisted deadline passed.
+  perform public.assert_true(r.ends_at is not null and r.ends_at <= now(), 'الوقت لسه شغال.');
+
+  -- Mark the round as expired (no answer submitted = incorrect, 0 points).
+  update public.rounds
+     set status = 'revealed',
+         result = 'incorrect',
+         score_delta = 0,
+         answered_at = now()
+   where id = p_round_id;
+
+  -- Advance the game exactly like next_round.
+  if r.current_round >= 6 then
+    red := coalesce(r.red_score, 0);
+    blue := coalesce(r.blue_score, 0);
+    if red > blue then
+      winner := 'red';  winner_name := 'الفريق الأحمر';
+    elsif blue > red then
+      winner := 'blue'; winner_name := 'الفريق الأزرق';
+    else
+      winner := 'tie';  winner_name := 'تعادل';
+    end if;
+
+    update public.rooms
+       set status='ended', winner=winner, winner_name=winner_name where id=p_room_id;
+
+    for rec in select user_id, team, score from public.room_players where room_id=p_room_id
+    loop
+      update public.profiles p
+         set games_played = games_played + 1,
+             wins = wins + case when (winner <> 'tie' and rec.team = winner) then 1 else 0 end
+       where p.id = rec.user_id;
+    end loop;
+    return query select true;
+  end if;
+
+  -- Start the next round with the other team.
+  next_team := case when r.current_turn_team='red' then 'blue' else 'red' end;
+  perform public.create_round(p_room_id, r.current_round + 1, next_team);
+  return query select true;
+end $$;
+
+grant execute on function public.expire_round to authenticated;
 </content>
 <task_progress>
 - [x] Phase 1: Full audit of gameplay code (pages, components, services, migrations)

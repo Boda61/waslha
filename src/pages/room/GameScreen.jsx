@@ -22,17 +22,18 @@ export default function GameScreen({
   onSubmitAnswer,
   onSubmitPrediction,
   onNextRound,
+  onExpireRound,
   onLeave,
   leaving,
 }) {
   const [clueSubmitting, setClueSubmitting] = useState(false);
   const [answerSubmitting, setAnswerSubmitting] = useState(false);
   const [predictionSubmitting, setPredictionSubmitting] = useState(false);
-  const [submittedChoice, setSubmittedChoice] = useState(null);
+  const [expired, setExpired] = useState(false);
 
   // Reset local submission state when a new round starts.
   useEffect(() => {
-    setSubmittedChoice(null);
+    setExpired(false);
   }, [round?.id]);
 
   if (!room || !round || !challenge || !myPlayer) {
@@ -51,12 +52,16 @@ export default function GameScreen({
   const isActiveTeamMember = myTeam === activeTeam;
   const revealed = round.status === 'revealed';
   const ended = room.status === 'ended';
-  const activeTeamSize = players.filter((p) => p.team === activeTeam).length;
-  const leaderLocked = isLeader && activeTeamSize > 1;
+  const leaderLocked = isLeader; // The leader NEVER answers, even when alone.
   const leaderPlayer = players.find((p) => p.userId === leaderId);
   const leaderName = leaderPlayer?.username || 'القائد';
   const myPrediction = predictions.find((p) => p.userId === myUid)?.choiceIndex;
   const canChat = !revealed && isActiveTeamMember && round.status === 'clue_submitted';
+
+  // Authoritative persisted answer state (survives refresh).
+  const persistedChoiceIndex = round.selectedChoiceIndex;
+  const mySubmitted = round.submittedBy === myUid;
+  const myChoiceIndex = mySubmitted ? persistedChoiceIndex : null;
 
   const redMembers = players.filter((p) => p.team === 'red');
   const blueMembers = players.filter((p) => p.team === 'blue');
@@ -71,14 +76,10 @@ export default function GameScreen({
   };
 
   const handleAnswer = async (choiceIndex) => {
-    if (answerSubmitting) return;
+    if (answerSubmitting || mySubmitted) return;
     setAnswerSubmitting(true);
-    setSubmittedChoice(choiceIndex);
     try {
       await onSubmitAnswer(choiceIndex);
-    } catch (err) {
-      setSubmittedChoice(null);
-      throw err;
     } finally {
       setAnswerSubmitting(false);
     }
@@ -94,6 +95,12 @@ export default function GameScreen({
     }
   };
 
+  const handleTimerExpire = () => {
+    if (revealed || ended || expired) return;
+    setExpired(true);
+    onExpireRound?.();
+  };
+
   const renderMain = () => {
     if (revealed || ended) {
       return (
@@ -102,6 +109,16 @@ export default function GameScreen({
           <p className="text-xl font-bold text-white">
             {revealed ? 'النتيجة...' : 'اللعبة خلصت'}
           </p>
+        </div>
+      );
+    }
+
+    if (expired) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-night-800 px-6 py-16 text-center">
+          <span className="text-5xl">⏰</span>
+          <p className="text-lg font-bold text-white">انتهى وقت الجولة!</p>
+          <p className="text-sm text-slate-400">بنحوّل الدور للفريق التاني...</p>
         </div>
       );
     }
@@ -126,8 +143,8 @@ export default function GameScreen({
           round={round}
           isLeader={isLeader}
           leaderLocked={leaderLocked}
-          mySubmitted={submittedChoice !== null}
-          myChoiceIndex={submittedChoice}
+          mySubmitted={mySubmitted}
+          myChoiceIndex={myChoiceIndex}
           onAnswer={handleAnswer}
           submitting={answerSubmitting}
         />
@@ -211,12 +228,18 @@ export default function GameScreen({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {!revealed && !ended && (
+          {!revealed && !ended && !expired && (
             <Timer
               deadline={round.endsAt}
               durationSeconds={TIMERS.answerSeconds}
               key={round.id}
+              onExpire={handleTimerExpire}
             />
+          )}
+          {expired && (
+            <span className="rounded-full bg-rose-500/20 px-3 py-1 text-sm font-bold text-rose-300">
+              انتهى الوقت ⏰
+            </span>
           )}
           {revealed && (
             <span className="rounded-full bg-gold-500/20 px-3 py-1 text-sm font-bold text-gold-300">
