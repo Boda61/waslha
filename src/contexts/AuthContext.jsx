@@ -49,6 +49,11 @@ export function AuthProvider({ children }) {
 
   // Subscribe to the profile row with a realtime listener.
   useEffect(() => {
+    // Keep profileLoading=true while auth is still restoring its session,
+    // so ProtectedRoute waits instead of treating a missing profile as
+    // "user never registered".
+    if (initializing) return undefined;
+
     if (!user) {
       setProfile(null);
       setProfileLoading(false);
@@ -101,7 +106,7 @@ export function AuthProvider({ children }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, initializing]);
 
   const logout = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
