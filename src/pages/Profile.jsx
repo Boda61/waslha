@@ -113,11 +113,11 @@ export default function Profile() {
           <div className="mt-6 grid grid-cols-2 gap-3 rounded-2xl bg-night-800 p-4">
             <div>
               <p className="text-xs text-slate-400">إجمالي الألعاب</p>
-              <p className="text-2xl font-black text-white">{profile?.stats?.gamesPlayed ?? 0}</p>
+              <p className="text-2xl font-black text-white">{profile?.games_played ?? 0}</p>
             </div>
             <div>
               <p className="text-xs text-slate-400">مرات الفوز</p>
-              <p className="text-2xl font-black text-gold-300">{profile?.stats?.wins ?? 0}</p>
+              <p className="text-2xl font-black text-gold-300">{profile?.wins ?? 0}</p>
             </div>
           </div>
         </div>
