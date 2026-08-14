@@ -10,8 +10,19 @@ export function subscribeMessages(roomId, roundId, onData) {
     return () => {};
   }
 
+  const channelName = `public:messages:round_id=eq.${roundId}`;
+  const topic = `realtime:${channelName}`;
+
+  // Defensive: if a channel with the same name already exists (remount,
+  // double-effect, or a second subscriber), remove it first. Otherwise
+  // supabase-js throws "cannot add postgres_changes callbacks ... after subscribe()".
+  supabase
+    .getChannels()
+    .filter((c) => c.topic === topic)
+    .forEach((c) => supabase.removeChannel(c));
+
   const channel = supabase
-    .channel(`public:messages:round_id=eq.${roundId}`)
+    .channel(channelName)
     .on(
       'postgres_changes',
       {
