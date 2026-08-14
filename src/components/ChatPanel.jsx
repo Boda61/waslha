@@ -42,7 +42,7 @@ export default function ChatPanel({ roomId, roundId, canChat, currentPlayer, onC
     <section className="flex h-full flex-col rounded-2xl border border-white/10 bg-night-900/60">
       <header className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
         <span className="text-lg">💬</span>
-        <h3 className="font-bold text-white">شات الفريق</h3>
+        <h3 className="font-bold text-white">شات الجيم</h3>
         {canChat && (
           <span className="mr-auto text-xs text-emerald-400">مفتوح ليك ✍️</span>
         )}

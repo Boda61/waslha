@@ -1,11 +1,12 @@
 import Avatar from './Avatar.jsx';
 import { teamTheme } from '../utils/helpers.js';
 
-export default function PlayerCard({ player, isMe, isHost, showTeam, onMakeLeader, onTransferHost, busy }) {
+export default function PlayerCard({ player, isMe, isHost, isLeader, showTeam, onMakeLeader, onTransferHost, busy }) {
   const theme = teamTheme(player.team);
   const teamColor =
     theme.color === 'rose' ? 'ring-rose-400/50' : theme.color === 'sky' ? 'ring-sky-400/50' : 'ring-white/10';
   const isBusy = busy === `leader:${player.userId}` || busy === `host:${player.userId}`;
+  const leaderBadge = isLeader || player.isLeader;
 
   return (
     <div
@@ -21,7 +22,7 @@ export default function PlayerCard({ player, isMe, isHost, showTeam, onMakeLeade
         </p>
         <div className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-400">
           {showTeam && <span>{showTeam}</span>}
-          {player.isLeader && <span className="rounded bg-gold-500/20 px-1.5 text-gold-300">قائد</span>}
+          {leaderBadge && <span className="rounded bg-gold-500/20 px-1.5 text-gold-300">قائد</span>}
           {isHost && <span className="rounded bg-brand-500/20 px-1.5 text-brand-300">Host</span>}
           {player.isReady && <span className="text-emerald-400">جاهز ✓</span>}
           {player.online ? (

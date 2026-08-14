@@ -3,7 +3,8 @@ import { friendlyError, camelcaseKeys } from '../utils/helpers.js';
 import { CHAT_LIMITS } from '../utils/constants.js';
 
 // ── Realtime chat subscription (per round) ────────────────────────────────────
-// RLS allows only active-team members to insert during clue_submitted.
+// RLS: any room member may insert during the answer race (clue_submitted),
+// so both teams discuss the hint together in real time.
 export function subscribeMessages(roomId, roundId, onData) {
   if (!roundId) {
     onData([]);
@@ -48,7 +49,7 @@ export function subscribeMessages(roomId, roundId, onData) {
   return () => supabase.removeChannel(channel);
 }
 
-// Send a message. RLS enforces active-team + clue-submitted + length.
+// Send a message. RLS enforces membership + answer race + length.
 export async function sendMessage(roomId, roundId, sender, text) {
   const trimmed = String(text || '').trim().slice(0, CHAT_LIMITS.maxLength);
   if (!trimmed) return;

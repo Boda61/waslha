@@ -1,10 +1,13 @@
 import { useState } from 'react';
 
 // The two secret images are rendered as visual cards (emoji + theme) so they
-// are fully self-contained. Only the leader of the active team sees them.
-export default function LeaderPanel({ challenge, onClue, submitting }) {
+// are fully self-contained. Only the room leader sees them.
+export default function LeaderPanel({ challenge, onClue, submitting, players, myUid, onMakeLeader }) {
   const [clue, setClue] = useState('');
+  const [showTransfer, setShowTransfer] = useState(false);
   const canSubmit = clue.trim().length >= 2 && !submitting;
+
+  const others = players.filter((p) => p.userId !== myUid);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -57,9 +60,40 @@ export default function LeaderPanel({ challenge, onClue, submitting }) {
           </button>
         </div>
         <p className="mt-2 text-xs text-slate-500">
-          أول ما تبعت التلميح مفيش تعديل — فريقك هيشوف 4 اختيارات ويختار.
+          أول ما تبعت التلميح مفيش تعديل — الفريقين كلهم هيشوفوا 4 اختيارات ويتسابقوا.
         </p>
       </form>
+
+      <div className="mt-6 rounded-2xl border border-white/10 bg-night-800/60 p-4">
+        <button
+          type="button"
+          onClick={() => setShowTransfer((v) => !v)}
+          className="text-sm font-bold text-gold-300 transition hover:text-gold-200"
+        >
+          سلّم القيادة 👑 {showTransfer ? '▲' : '▼'}
+        </button>
+        {showTransfer && (
+          <div className="mt-3 space-y-2">
+            {others.length === 0 && (
+              <p className="text-xs text-slate-500">مفيش لاعبين تانيين في الغرفة.</p>
+            )}
+            {others.map((p) => (
+              <button
+                key={p.userId}
+                type="button"
+                onClick={() => onMakeLeader?.(p.userId)}
+                className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-night-900 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:border-gold-400/40 hover:text-gold-200"
+              >
+                <span>
+                  {p.username}{' '}
+                  {p.team === 'red' ? '🔴' : p.team === 'blue' ? '🔵' : '⚪'}
+                </span>
+                <span className="text-xs text-gold-300">اجعلها قائدًا</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

@@ -12,7 +12,7 @@ import {
   subscribeChallenge,
   setTeam,
   setReady,
-  setTeamLeader,
+  changeLeader,
   transferHost,
   leaveRoom,
   setOnline,
@@ -21,10 +21,9 @@ import {
   startGame,
   submitClue,
   submitAnswer,
-  submitPrediction,
   nextRound,
   expireRound,
-  subscribePredictions,
+  subscribeRoundAnswers,
 } from '../services/gameService.js';
 import { ROOM_STATUS } from '../utils/constants.js';
 
@@ -38,7 +37,7 @@ export default function RoomPage() {
   const [players, setPlayers] = useState([]);
   const [round, setRound] = useState(null);
   const [challenge, setChallenge] = useState(null);
-  const [predictions, setPredictions] = useState([]);
+  const [answers, setAnswers] = useState([]);
   const [notFound, setNotFound] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -80,20 +79,19 @@ export default function RoomPage() {
     };
   }, [roomId, user]);
 
-  // Current round + challenge + predictions (only while playing or ended)
+  // Current round + answers (only while playing or ended)
   const playingOrEnded = room && room.status !== ROOM_STATUS.lobby;
   useEffect(() => {
     if (!playingOrEnded || !room.roundId) {
       setRound(null);
-      setChallenge(null);
-      setPredictions([]);
+      setAnswers([]);
       return undefined;
     }
     const unsubRound = subscribeRound(roomId, room.roundId, setRound);
-    const unsubPred = subscribePredictions(roomId, room.roundId, setPredictions);
+    const unsubAnswers = subscribeRoundAnswers(room.roundId, setAnswers);
     return () => {
       unsubRound();
-      unsubPred();
+      unsubAnswers();
     };
   }, [roomId, playingOrEnded, room?.roundId]);
 
@@ -107,6 +105,7 @@ export default function RoomPage() {
 
   const myPlayer = user ? players.find((p) => p.userId === user.id) : null;
   const isHost = !!room && room.hostId === user?.id;
+  const isLeader = !!room && room.leaderId === user?.id;
 
   const handleLeave = useCallback(async () => {
     if (leaving) return;
@@ -122,9 +121,9 @@ export default function RoomPage() {
 
   const handleSetTeam = (team) => setTeam(roomId, team);
   const handleSetReady = (ready) => setReady(roomId, ready);
-  const handleSetLeader = async (targetUserId) => {
+  const handleChangeLeader = async (targetUserId) => {
     try {
-      await setTeamLeader(roomId, targetUserId);
+      await changeLeader(roomId, targetUserId);
     } catch (err) {
       push(err.message, 'error');
     }
@@ -160,15 +159,6 @@ export default function RoomPage() {
       console.error('submit_answer error:', err);
       push(err.message, 'error');
       throw err;
-    }
-  };
-
-  const handleSubmitPrediction = async (choiceIndex) => {
-    try {
-      await submitPrediction(roomId, room.roundId, choiceIndex);
-    } catch (err) {
-      console.error('submit_prediction error:', err);
-      push(err.message, 'error');
     }
   };
   const handleNextRound = async () => {
@@ -246,9 +236,10 @@ export default function RoomPage() {
         players={players}
         myPlayer={myPlayer}
         isHost={isHost}
+        isLeader={isLeader}
         onSetTeam={handleSetTeam}
         onSetReady={handleSetReady}
-        onSetLeader={handleSetLeader}
+        onMakeLeader={handleChangeLeader}
         onTransferHost={handleTransferHost}
         onStartGame={handleStart}
         onLeave={handleLeave}
@@ -262,11 +253,14 @@ export default function RoomPage() {
       players={players}
       round={round}
       challenge={challenge}
-      predictions={predictions}
+      answers={answers}
       myPlayer={myPlayer}
+      isHost={isHost}
+      isLeader={isLeader}
+      onSetTeam={handleSetTeam}
       onSubmitClue={handleSubmitClue}
       onSubmitAnswer={handleSubmitAnswer}
-      onSubmitPrediction={handleSubmitPrediction}
+      onMakeLeader={handleChangeLeader}
       onNextRound={handleNextRound}
       onExpireRound={handleExpireRound}
       onLeave={handleLeave}

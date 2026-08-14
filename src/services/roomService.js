@@ -22,14 +22,15 @@ export async function setTeam(roomId, team) {
   return camelcaseKeys(data?.[0]);
 }
 
-export async function setTeamLeader(roomId, targetUserId) {
+// Single room-level leader: ONLY the current leader may hand leadership over.
+export async function changeLeader(roomId, targetUserId) {
   if (!roomId) throw new Error('معرّف الغرفة مفقود.');
   if (!targetUserId) throw new Error('معرّف اللاعب مفقود.');
-  const { error } = await supabase.rpc('set_team_leader', {
+  const { error } = await supabase.rpc('change_leader', {
     p_room_id: roomId,
     p_target_user_id: targetUserId,
   });
-  if (error) throw new Error(friendlyError(error, 'مش قدرنا نحدّد القائد.'));
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نغيّر القائد.'));
   return true;
 }
 

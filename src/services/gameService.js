@@ -35,6 +35,44 @@ export async function submitAnswer(roomId, roundId, choiceIndex) {
   return camelcaseKeys(data);
 }
 
+// Realtime listener for the current round's recorded answers (both teams).
+// Members can read their room's attempts (RLS), so the UI can confirm a
+// submission or a wrong answer straight from the database.
+export function subscribeRoundAnswers(roundId, onData) {
+  if (!roundId) {
+    onData([]);
+    return () => {};
+  }
+
+  const channel = supabase
+    .channel(`public:round_answers:round_id=eq.${roundId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'round_answers',
+        filter: `round_id=eq.${roundId}`,
+      },
+      () => {
+        supabase
+          .from('round_answers')
+          .select('*')
+          .eq('round_id', roundId)
+          .then(({ data }) => onData(camelcaseKeys(data) || []));
+      },
+    )
+    .subscribe();
+
+  supabase
+    .from('round_answers')
+    .select('*')
+    .eq('round_id', roundId)
+    .then(({ data }) => onData(camelcaseKeys(data) || []));
+
+  return () => supabase.removeChannel(channel);
+}
+
 export async function submitPrediction(roomId, roundId, choiceIndex) {
   if (!roomId) throw new Error('معرّف الغرفة مفقود.');
   if (!roundId) throw new Error('معرّف الجولة مفقود.');

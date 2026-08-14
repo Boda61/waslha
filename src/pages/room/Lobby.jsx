@@ -12,9 +12,10 @@ export default function Lobby({
   players,
   myPlayer,
   isHost,
+  isLeader,
   onSetTeam,
   onSetReady,
-  onSetLeader,
+  onMakeLeader,
   onTransferHost,
   onStartGame,
   onLeave,
@@ -48,7 +49,7 @@ export default function Lobby({
   const makeLeader = async (targetId) => {
     setBusy(`leader:${targetId}`);
     try {
-      await onSetLeader(targetId);
+      await onMakeLeader(targetId);
     } catch (err) {
       push(err.message, 'error');
     } finally {
@@ -67,10 +68,10 @@ export default function Lobby({
     }
   };
 
-  const hostTeam = myPlayer?.team;
-
   const startAll = players.filter((p) => p.isReady).length;
-  const canStart = isHost && players.length >= MIN_PLAYERS && startAll === players.length;
+  const canStart =
+    (isHost || isLeader) && players.length >= MIN_PLAYERS && startAll === players.length;
+  const mayLead = isHost || isLeader;
 
   return (
     <div className="lobby-shell mx-auto max-w-5xl px-4 py-8">
@@ -113,7 +114,7 @@ export default function Lobby({
                     isHost={p.userId === room.hostId}
                     busy={busy}
                     onMakeLeader={
-                      isHost && p.team && p.team !== hostTeam ? makeLeader : undefined
+                      mayLead && p.userId !== myPlayer?.userId ? makeLeader : undefined
                     }
                     onTransferHost={isHost && p.userId !== myPlayer?.userId ? transferHostTo : undefined}
                   />
@@ -145,7 +146,7 @@ export default function Lobby({
           {myPlayer?.isReady ? 'مش جاهز تاني' : 'أنا جاهز ✓'}
         </button>
 
-        {isHost && (
+        {mayLead && (
           <button
             onClick={onStartGame}
             disabled={!canStart}
