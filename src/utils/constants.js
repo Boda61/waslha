@@ -17,7 +17,7 @@ export const ROUND_STATUS = {
 
 export const MAX_PLAYERS = 8;
 export const MIN_PLAYERS = 3;
-export const TOTAL_ROUNDS = 6;
+export const TOTAL_ROUNDS = 10;
 
 export const SCORING = {
   correctAnswer: 100,
