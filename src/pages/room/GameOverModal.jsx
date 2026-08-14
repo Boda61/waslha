@@ -12,7 +12,11 @@ export default function GameOverModal({ room, players }) {
   const winner = room?.winner;
   const tie = winner === 'tie';
 
-  const sortPlayers = [...(players || [])].sort((a, b) => (b.score || 0) - (a.score || 0));
+  // The leader is neutral (outside both teams) — never part of the MVP list.
+  const leaderId = room?.leaderId;
+  const sortPlayers = (players || [])
+    .filter((p) => p.userId !== leaderId)
+    .sort((a, b) => (b.score || 0) - (a.score || 0));
 
   const handleLeave = async () => {
     setLeaving(true);

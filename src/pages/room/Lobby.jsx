@@ -72,6 +72,8 @@ export default function Lobby({
   const canStart =
     (isHost || isLeader) && players.length >= MIN_PLAYERS && startAll === players.length;
   const mayLead = isHost || isLeader;
+  const isMeLeader = myPlayer?.userId === room?.leaderId;
+  const neutralPlayers = players.filter((p) => !p.team);
 
   return (
     <div className="lobby-shell mx-auto max-w-5xl px-4 py-8">
@@ -81,6 +83,31 @@ export default function Lobby({
           {players.length} من {MAX_PLAYERS} لاعب • لازم {MIN_PLAYERS} لاعب عشان نبدأ
         </p>
       </div>
+
+      {/* Neutral leader — outside both teams */}
+      {neutralPlayers.length > 0 && (
+        <section className="mt-6 rounded-2xl border-2 border-gold-500/25 bg-gold-500/5 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-sm font-black text-gold-300">🕵️ القائد — بره الفريقين</span>
+            <span className="text-xs text-slate-400">{neutralPlayers.length} لاعب</span>
+          </div>
+          <div className="space-y-2">
+            {neutralPlayers.map((p) => (
+              <PlayerCard
+                key={p.userId}
+                player={p}
+                isMe={p.userId === myPlayer?.userId}
+                isHost={p.userId === room.hostId}
+                busy={busy}
+                onMakeLeader={
+                  mayLead && p.userId !== myPlayer?.userId ? makeLeader : undefined
+                }
+                onTransferHost={isHost && p.userId !== myPlayer?.userId ? transferHostTo : undefined}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {TEAM_IDS.map((tid) => (
@@ -121,13 +148,19 @@ export default function Lobby({
                 ))}
             </div>
 
-            <button
-              onClick={() => assignTeam(tid)}
-              disabled={!myPlayer || myPlayer.team === tid || busy === 'team' || room.status !== 'lobby'}
-              className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 py-2 text-sm font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {myPlayer?.team === tid ? 'انت في الفريق ده ✓' : 'انضم للفريق ده'}
-            </button>
+            {isMeLeader ? (
+              <p className="mt-3 w-full rounded-xl border border-gold-500/25 bg-gold-500/10 py-2 text-center text-sm font-bold text-gold-300">
+                القائد بره الفريقين 🕵️
+              </p>
+            ) : (
+              <button
+                onClick={() => assignTeam(tid)}
+                disabled={!myPlayer || myPlayer.team === tid || busy === 'team' || room.status !== 'lobby'}
+                className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 py-2 text-sm font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {myPlayer?.team === tid ? 'انت في الفريق ده ✓' : 'انضم للفريق ده'}
+              </button>
+            )}
           </section>
         ))}
       </div>

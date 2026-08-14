@@ -57,6 +57,7 @@ export default function GameScreen({
 
   const redMembers = players.filter((p) => p.team === 'red');
   const blueMembers = players.filter((p) => p.team === 'blue');
+  const neutralMembers = players.filter((p) => !p.team);
 
   const handleClue = async (clue) => {
     setClueSubmitting(true);
@@ -264,6 +265,27 @@ export default function GameScreen({
           )}
         </div>
       </div>
+
+      {/* Neutral leader — outside both teams */}
+      {neutralMembers.length > 0 && (
+        <div className="mb-4 rounded-2xl border-2 border-gold-500/25 bg-gold-500/5 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-black text-gold-300">🕵️ القائد — بره الفريقين</span>
+            <span className="text-xs text-slate-400">{neutralMembers.length} لاعب</span>
+          </div>
+          <div className="space-y-2">
+            {neutralMembers.map((p) => (
+              <PlayerCard
+                key={p.userId}
+                player={p}
+                isMe={p.userId === myUid}
+                isHost={room.hostId === p.userId}
+                isLeader={p.userId === room.leaderId}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Teams */}
       <div className="gs-teams mb-4 grid gap-4 sm:grid-cols-2">
