@@ -22,6 +22,28 @@ export async function setTeam(roomId, team) {
   return camelcaseKeys(data?.[0]);
 }
 
+export async function setTeamLeader(roomId, targetUserId) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  if (!targetUserId) throw new Error('معرّف اللاعب مفقود.');
+  const { error } = await supabase.rpc('set_team_leader', {
+    p_room_id: roomId,
+    p_target_user_id: targetUserId,
+  });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نحدّد القائد.'));
+  return true;
+}
+
+export async function transferHost(roomId, newHostId) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  if (!newHostId) throw new Error('معرّف اللاعب مفقود.');
+  const { error } = await supabase.rpc('transfer_host', {
+    p_room_id: roomId,
+    p_new_host_id: newHostId,
+  });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا ننقل الهوست.'));
+  return true;
+}
+
 export async function setReady(roomId, ready) {
   if (!roomId) throw new Error('معرّف الغرفة مفقود.');
   const { data, error } = await supabase.rpc('set_ready', { p_room_id: roomId, p_ready: ready });

@@ -1,10 +1,11 @@
 import Avatar from './Avatar.jsx';
 import { teamTheme } from '../utils/helpers.js';
 
-export default function PlayerCard({ player, isMe, isHost, showTeam }) {
+export default function PlayerCard({ player, isMe, isHost, showTeam, onMakeLeader, onTransferHost, busy }) {
   const theme = teamTheme(player.team);
   const teamColor =
     theme.color === 'rose' ? 'ring-rose-400/50' : theme.color === 'sky' ? 'ring-sky-400/50' : 'ring-white/10';
+  const isBusy = busy === `leader:${player.userId}` || busy === `host:${player.userId}`;
 
   return (
     <div
@@ -34,7 +35,27 @@ export default function PlayerCard({ player, isMe, isHost, showTeam }) {
           )}
         </div>
       </div>
-      <span className="text-sm font-black text-slate-200">{player.score ?? 0} نقطة</span>
+      <div className="flex flex-col items-end gap-1">
+        <span className="text-sm font-black text-slate-200">{player.score ?? 0} نقطة</span>
+        {onMakeLeader && (
+          <button
+            onClick={() => onMakeLeader(player.userId)}
+            disabled={isBusy}
+            className="text-[11px] font-bold text-gold-300 transition hover:text-gold-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            👑 اجعل قائد
+          </button>
+        )}
+        {onTransferHost && (
+          <button
+            onClick={() => onTransferHost(player.userId)}
+            disabled={isBusy}
+            className="text-[11px] font-bold text-brand-300 transition hover:text-brand-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            نقل الهوست
+          </button>
+        )}
+      </div>
     </div>
   );
 }

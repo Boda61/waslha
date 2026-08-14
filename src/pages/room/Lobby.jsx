@@ -14,6 +14,8 @@ export default function Lobby({
   isHost,
   onSetTeam,
   onSetReady,
+  onSetLeader,
+  onTransferHost,
   onStartGame,
   onLeave,
 }) {
@@ -42,6 +44,30 @@ export default function Lobby({
       setBusy('');
     }
   };
+
+  const makeLeader = async (targetId) => {
+    setBusy(`leader:${targetId}`);
+    try {
+      await onSetLeader(targetId);
+    } catch (err) {
+      push(err.message, 'error');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const transferHostTo = async (targetId) => {
+    setBusy(`host:${targetId}`);
+    try {
+      await onTransferHost(targetId);
+    } catch (err) {
+      push(err.message, 'error');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const hostTeam = myPlayer?.team;
 
   const startAll = players.filter((p) => p.isReady).length;
   const canStart = isHost && players.length >= MIN_PLAYERS && startAll === players.length;
@@ -85,6 +111,11 @@ export default function Lobby({
                     player={p}
                     isMe={p.userId === myPlayer?.userId}
                     isHost={p.userId === room.hostId}
+                    busy={busy}
+                    onMakeLeader={
+                      isHost && p.team && p.team !== hostTeam ? makeLeader : undefined
+                    }
+                    onTransferHost={isHost && p.userId !== myPlayer?.userId ? transferHostTo : undefined}
                   />
                 ))}
             </div>

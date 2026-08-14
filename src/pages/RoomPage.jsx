@@ -12,6 +12,8 @@ import {
   subscribeChallenge,
   setTeam,
   setReady,
+  setTeamLeader,
+  transferHost,
   leaveRoom,
   setOnline,
 } from '../services/roomService.js';
@@ -120,6 +122,20 @@ export default function RoomPage() {
 
   const handleSetTeam = (team) => setTeam(roomId, team);
   const handleSetReady = (ready) => setReady(roomId, ready);
+  const handleSetLeader = async (targetUserId) => {
+    try {
+      await setTeamLeader(roomId, targetUserId);
+    } catch (err) {
+      push(err.message, 'error');
+    }
+  };
+  const handleTransferHost = async (newHostId) => {
+    try {
+      await transferHost(roomId, newHostId);
+    } catch (err) {
+      push(err.message, 'error');
+    }
+  };
   const handleStart = async () => {
     try {
       await startGame(roomId);
@@ -232,6 +248,8 @@ export default function RoomPage() {
         isHost={isHost}
         onSetTeam={handleSetTeam}
         onSetReady={handleSetReady}
+        onSetLeader={handleSetLeader}
+        onTransferHost={handleTransferHost}
         onStartGame={handleStart}
         onLeave={handleLeave}
       />
