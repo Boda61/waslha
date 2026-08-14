@@ -4,16 +4,21 @@ import Avatar from './Avatar.jsx';
 import { timeAgo } from '../utils/helpers.js';
 import { CHAT_LIMITS } from '../utils/constants.js';
 
-export default function ChatPanel({ roomId, roundId, canChat, currentPlayer, onClose }) {
-  const [messages, setMessages] = useState([]);
+export default function ChatPanel({ roomId, roundId, canChat, currentPlayer, onClose, messages: externalMessages }) {
+  const [internalMessages, setInternalMessages] = useState([]);
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const scrollRef = useRef(null);
+  const messages = externalMessages !== undefined ? externalMessages : internalMessages;
 
+  // When a parent (e.g. ChatLauncher) owns the realtime subscription and passes
+  // messages down, don't subscribe here too — a second channel with the same name
+  // would crash supabase-js ("cannot add postgres_changes callbacks after subscribe()").
   useEffect(() => {
-    const unsub = subscribeMessages(roomId, roundId, setMessages);
+    if (externalMessages !== undefined) return;
+    const unsub = subscribeMessages(roomId, roundId, setInternalMessages);
     return unsub;
-  }, [roomId, roundId]);
+  }, [roomId, roundId, externalMessages]);
 
   useEffect(() => {
     if (scrollRef.current) {

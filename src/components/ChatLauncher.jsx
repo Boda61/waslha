@@ -67,6 +67,7 @@ export default function ChatLauncher({ roomId, roundId, canChat, currentPlayer }
               roundId={roundId}
               canChat={canChat}
               currentPlayer={currentPlayer}
+              messages={messages}
               onClose={closeChat}
             />
           </div>
