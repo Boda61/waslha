@@ -65,7 +65,7 @@
   .gs-leave {
     justify-content: flex-start;
   }
-  .gs-leave button {
+  .gs-leave button:not(.chat-launcher-btn) {
     padding: 0.45rem 0.9rem;
     font-size: 0.78rem;
     border-radius: 0.75rem;
@@ -208,9 +208,8 @@
   }
 
   /* Chat: secondary, fluid height */
-  .gs-chat {
-    height: clamp(280px, 46vh, 420px);
-    min-width: 0;
+  .chat-launcher-panel {
+    height: min(80dvh, 78vh);
   }
 
   /* Modals: fluid padding + dvh-aware max height */
@@ -316,7 +315,7 @@
   .timer-pill {
     padding: 0.35rem 0.8rem;
   }
-  .gs-leave button {
+  .gs-leave button:not(.chat-launcher-btn) {
     font-size: 0.72rem;
     padding: 0.4rem 0.7rem;
   }

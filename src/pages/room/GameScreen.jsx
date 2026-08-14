@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Scoreboard from '../../components/Scoreboard.jsx';
-import ChatPanel from '../../components/ChatPanel.jsx';
+import ChatLauncher from '../../components/ChatLauncher.jsx';
 import TeamBadge from '../../components/TeamBadge.jsx';
 import Timer from '../../components/Timer.jsx';
 import PlayerCard from '../../components/PlayerCard.jsx';
@@ -213,8 +213,14 @@ export default function GameScreen({
         <Scoreboard room={room} />
       </div>
 
-      {/* Leave button */}
-      <div className="gs-leave mb-4 flex justify-end">
+      {/* Leave + chat toggle */}
+      <div className="gs-leave mb-4 flex items-center justify-end gap-2">
+        <ChatLauncher
+          roomId={room.id}
+          roundId={round.id}
+          canChat={canChat}
+          currentPlayer={myPlayer}
+        />
         <button
           onClick={onLeave}
           disabled={leaving}
@@ -262,23 +268,14 @@ export default function GameScreen({
         {teamSection('blue')}
       </div>
 
-      {/* Main + Chat */}
-      <div className="gs-main grid gap-4 lg:grid-cols-[1fr_360px]">
+      {/* Main gameplay */}
+      <div className="gs-main">
         <div className="gs-main-box rounded-2xl border border-white/10 bg-night-900/40 p-4 sm:p-6">
           {myPlayer.team ? (
             renderMain()
           ) : (
             <p className="py-16 text-center text-slate-400">مفيش فريق لسه...</p>
           )}
-        </div>
-
-        <div className="gs-chat h-[420px] lg:h-[560px]">
-          <ChatPanel
-            roomId={room.id}
-            roundId={round.id}
-            canChat={canChat}
-            currentPlayer={myPlayer}
-          />
         </div>
       </div>
 

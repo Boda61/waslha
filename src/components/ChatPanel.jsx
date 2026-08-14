@@ -4,7 +4,7 @@ import Avatar from './Avatar.jsx';
 import { timeAgo } from '../utils/helpers.js';
 import { CHAT_LIMITS } from '../utils/constants.js';
 
-export default function ChatPanel({ roomId, roundId, canChat, currentPlayer }) {
+export default function ChatPanel({ roomId, roundId, canChat, currentPlayer, onClose }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [error, setError] = useState('');
@@ -43,6 +43,16 @@ export default function ChatPanel({ roomId, roundId, canChat, currentPlayer }) {
         )}
         {!canChat && (
           <span className="mr-auto text-xs text-slate-500">وضع المشاهدة 👀</span>
+        )}
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="إغلاق الشات"
+            className="mr-auto rounded-lg border border-white/10 px-2 py-1 text-xs text-slate-300 transition hover:bg-white/5"
+          >
+            ✕
+          </button>
         )}
       </header>
 
