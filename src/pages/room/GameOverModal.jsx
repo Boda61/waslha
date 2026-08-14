@@ -35,7 +35,7 @@ export default function GameOverModal({ room, players }) {
         </h2>
         <p className="mt-1 text-slate-300">{tie ? 'إيه العراك ده 😂' : 'كسبوا الجايزة الكبرى 🥇'}</p>
 
-        <div className="mt-5 overflow-hidden rounded-2xl border border-white/10">
+        <div className="gom-table mt-5 overflow-hidden rounded-2xl border border-white/10">
           <table className="w-full text-sm">
             <thead className="bg-night-800 text-slate-300">
               <tr>

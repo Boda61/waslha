@@ -177,7 +177,7 @@ export default function GameScreen({
     const members = teamId === 'red' ? redMembers : blueMembers;
     return (
       <section
-        className={`rounded-2xl border-2 p-3 ${
+        className={`team-card rounded-2xl border-2 p-3 ${
           teamId === 'red'
             ? 'border-rose-500/20 bg-rose-500/5'
             : 'border-sky-500/20 bg-sky-500/5'
@@ -207,14 +207,14 @@ export default function GameScreen({
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="game-shell mx-auto max-w-6xl px-4 py-6">
       {/* Scoreboard */}
-      <div className="mb-4">
+      <div className="gs-score mb-4">
         <Scoreboard room={room} />
       </div>
 
       {/* Leave button */}
-      <div className="mb-4 flex justify-end">
+      <div className="gs-leave mb-4 flex justify-end">
         <button
           onClick={onLeave}
           disabled={leaving}
@@ -225,12 +225,12 @@ export default function GameScreen({
       </div>
 
       {/* Status bar */}
-      <div className="glass mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
+      <div className="gs-status glass mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl px-4 py-3">
         <div className="flex items-center gap-3">
-          <span className="rounded-lg bg-night-700 px-3 py-1 text-sm font-bold text-white">
+          <span className="round-chip rounded-lg bg-night-700 px-3 py-1 text-sm font-bold text-white">
             جولة {Math.min(room.currentRound, TOTAL_ROUNDS)} / {TOTAL_ROUNDS}
           </span>
-          <span className="flex items-center gap-2 text-sm text-slate-300">
+          <span className="team-turn flex items-center gap-2 text-sm text-slate-300">
             الدور على <TeamBadge teamId={activeTeam} />
           </span>
         </div>
@@ -257,14 +257,14 @@ export default function GameScreen({
       </div>
 
       {/* Teams */}
-      <div className="mb-4 grid gap-4 sm:grid-cols-2">
+      <div className="gs-teams mb-4 grid gap-4 sm:grid-cols-2">
         {teamSection('red')}
         {teamSection('blue')}
       </div>
 
       {/* Main + Chat */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-2xl border border-white/10 bg-night-900/40 p-4 sm:p-6">
+      <div className="gs-main grid gap-4 lg:grid-cols-[1fr_360px]">
+        <div className="gs-main-box rounded-2xl border border-white/10 bg-night-900/40 p-4 sm:p-6">
           {myPlayer.team ? (
             renderMain()
           ) : (
@@ -272,7 +272,7 @@ export default function GameScreen({
           )}
         </div>
 
-        <div className="h-[420px] lg:h-[560px]">
+        <div className="gs-chat h-[420px] lg:h-[560px]">
           <ChatPanel
             roomId={room.id}
             roundId={round.id}

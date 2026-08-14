@@ -54,13 +54,13 @@ export default function Timer({ deadline, durationSeconds = 90, onExpire }) {
   return (
     <div className="flex items-center gap-2" aria-live="polite">
       <span
-        className={`rounded-full px-3 py-1 font-black tabular-nums ${
+        className={`timer-pill rounded-full px-3 py-1 font-black tabular-nums ${
           danger ? 'animate-pulse bg-rose-500/20 text-rose-300' : 'bg-brand-500/20 text-brand-300'
         }`}
       >
         {left}
       </span>
-      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-night-700">
+      <div className="timer-bar h-1.5 w-24 overflow-hidden rounded-full bg-night-700">
         <div
           className={`h-full rounded-full transition-all ${danger ? 'bg-rose-400' : 'bg-brand-400'}`}
           style={{ width: `${pct}%` }}

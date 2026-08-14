@@ -1,0 +1,253 @@
+/* Waslha — Mobile UI only (max-width: 768px).
+   Every rule in this file lives inside a media query, so the Desktop UI
+   (>768px) is completely unaffected. */
+
+@media (max-width: 768px) {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button,
+  [role='button'] {
+    touch-action: manipulation;
+  }
+
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* ── Navbar ─────────────────────────────────────────── */
+  .navbar {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .navbar-inner {
+    padding-inline: 0.75rem;
+  }
+
+  /* ── Game shell: reorder so gameplay sits above teams ── */
+  .game-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem 0.75rem calc(1rem + env(safe-area-inset-bottom));
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .game-shell .gs-leave { order: 3; margin-bottom: 0; }
+  .game-shell .gs-status { order: 1; margin-bottom: 0; }
+  .game-shell .gs-score { order: 2; margin-bottom: 0; }
+  .game-shell .gs-main { order: 4; margin-bottom: 0; }
+  .game-shell .gs-teams { order: 5; margin-bottom: 0; }
+
+  /* Leave: compact, top of the shell, never blocks gameplay */
+  .gs-leave {
+    justify-content: flex-start;
+  }
+  .gs-leave button {
+    padding: 0.45rem 0.85rem;
+    font-size: 0.8rem;
+    border-radius: 0.75rem;
+  }
+
+  /* Status bar → cinematic header with big timer */
+  .gs-status {
+    background: linear-gradient(160deg, rgba(17, 26, 46, 0.9), rgba(11, 17, 32, 0.94));
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 1rem;
+    padding: 0.6rem 0.75rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+  .gs-status .round-chip {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+  }
+  .gs-status .team-turn {
+    font-size: 0.8rem;
+  }
+
+  /* Big prominent timer */
+  .timer-pill {
+    font-size: 1.6rem;
+    line-height: 1;
+    padding: 0.4rem 1rem;
+    border-radius: 0.9rem;
+  }
+  .timer-bar {
+    width: 4.5rem;
+    height: 0.4rem;
+  }
+
+  /* Scoreboard compact */
+  .scoreboard {
+    padding: 0.6rem 0.75rem;
+    border-radius: 0.9rem;
+  }
+  .scoreboard .text-3xl {
+    font-size: 1.9rem;
+  }
+
+  /* Main gameplay box */
+  .gs-main-box {
+    padding: 0.75rem;
+    border-radius: 1rem;
+  }
+  .gs-main {
+    gap: 0.75rem;
+  }
+
+  /* Choice cards: 2-col grid on mobile for easy tapping */
+  .choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  /* Answer card: bigger tap area + pressed feedback + state glow */
+  .answer-card {
+    min-height: 100px;
+  }
+  .answer-card:not(:disabled):active {
+    transform: scale(0.96);
+  }
+  .answer-card[data-state='selected'] {
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.7), 0 6px 18px rgba(245, 158, 11, 0.25);
+  }
+  .answer-card[data-state='correct'] {
+    box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.7), 0 6px 18px rgba(16, 185, 129, 0.25);
+  }
+  .answer-card[data-state='incorrect'] {
+    box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.6);
+  }
+
+  /* Leader panel */
+  .lp-images {
+    gap: 0.65rem;
+  }
+  .lp-card {
+    padding: 1rem 0.5rem;
+    border-radius: 1.1rem;
+  }
+  .lp-emoji {
+    font-size: 3rem;
+  }
+  .lp-form-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .lp-input {
+    width: 100%;
+  }
+  .lp-submit {
+    width: 100%;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  /* Clue card */
+  .clue-card {
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+  }
+  .clue-text {
+    font-size: 1.4rem;
+  }
+
+  /* Teams readable */
+  .gs-teams {
+    gap: 0.75rem;
+  }
+  .team-card {
+    border-radius: 1rem;
+    padding: 0.6rem;
+  }
+
+  /* Chat */
+  .gs-chat {
+    height: 360px;
+  }
+
+  /* Modals */
+  .modal-panel {
+    padding: 1rem;
+    border-radius: 1.2rem;
+  }
+
+  /* Game over table → stacked cards */
+  .gom-table thead {
+    display: none;
+  }
+  .gom-table tbody {
+    display: block;
+  }
+  .gom-table tbody tr {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .gom-table tbody tr:last-child {
+    border-bottom: none;
+  }
+  .gom-table td {
+    padding: 0;
+  }
+  .gom-table td:first-child {
+    flex: 1;
+    text-align: right;
+  }
+  .gom-table td:nth-child(2) {
+    order: 3;
+  }
+  .gom-table td:last-child {
+    order: 4;
+    font-weight: 800;
+  }
+
+  /* Lobby */
+  .lobby-shell {
+    padding: 1rem 0.75rem calc(1.25rem + env(safe-area-inset-bottom));
+  }
+  .lobby-team {
+    border-radius: 1.1rem;
+  }
+  .lobby-controls {
+    padding: 0.9rem;
+    border-radius: 1.1rem;
+  }
+}
+
+/* ── Extra-small phones (<=390px) ─────────────────────── */
+@media (max-width: 390px) {
+  .game-shell {
+    padding-inline: 0.5rem;
+  }
+  .timer-pill {
+    font-size: 1.35rem;
+  }
+  .timer-bar {
+    width: 3.5rem;
+  }
+  .answer-card {
+    min-height: 92px;
+  }
+  .choice-grid {
+    gap: 0.5rem;
+  }
+  .lp-emoji {
+    font-size: 2.5rem;
+  }
+  .clue-text {
+    font-size: 1.25rem;
+  }
+  .gs-status {
+    padding: 0.5rem 0.6rem;
+  }
+  .navbar-inner {
+    gap: 0.5rem;
+    padding-inline: 0.6rem;
+  }
+  .navbar-inner .px-4 {
+    padding-inline: 0.6rem;
+  }
+}

@@ -24,16 +24,16 @@ export default function ActiveTeamPanel({
         <p className="text-sm text-slate-400">
           {challenge.title} <span className="text-slate-600">•</span> فريقك هو اللي عليه الدور
         </p>
-        <div className="mx-auto mt-3 max-w-md rounded-2xl border border-gold-500/30 bg-gold-500/10 px-6 py-4">
+        <div className="clue-card mx-auto mt-3 max-w-md rounded-2xl border border-gold-500/30 bg-gold-500/10 px-6 py-4">
           <p className="text-xs font-semibold text-gold-300">تلميح القائد</p>
-          <p className="mt-1 text-2xl font-black text-white">“{clue}”</p>
+          <p className="clue-text mt-1 text-2xl font-black text-white">“{clue}”</p>
           <p className="mt-1 text-xs text-slate-400">
             حاجة واحدة بس من الأربعة صح. دلوقتي 4 اختيارات ⬇️
           </p>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="choice-grid grid grid-cols-1 gap-3 sm:grid-cols-2">
         {challenge.choices.map((choice, i) => {
           let state = 'default';
           if (myChoiceIndex === i) state = 'selected';

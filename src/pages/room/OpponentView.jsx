@@ -37,12 +37,12 @@ export default function OpponentView({
         </p>
       ) : (
         <div className="mt-6">
-          <div className="mx-auto mb-5 max-w-md rounded-2xl border border-gold-500/30 bg-gold-500/10 px-6 py-4 text-center">
+          <div className="clue-card mx-auto mb-5 max-w-md rounded-2xl border border-gold-500/30 bg-gold-500/10 px-6 py-4 text-center">
             <p className="text-xs font-semibold text-gold-300">التلميح</p>
-            <p className="mt-1 text-2xl font-black text-white">“{round.clue}”</p>
+            <p className="clue-text mt-1 text-2xl font-black text-white">“{round.clue}”</p>
           </div>
 
-          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="choice-grid mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {challenge.choices.map((choice, i) => {
               let state = 'dimmed';
               if (revealed && i === round.correctIndex) state = 'correct';

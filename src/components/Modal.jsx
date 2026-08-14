@@ -8,7 +8,7 @@ export default function Modal({ open, onClose, children, title }) {
       aria-modal="true"
     >
       <div
-        className="glass animate-pop max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl p-6 shadow-2xl"
+        className="modal-panel glass animate-pop max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl p-6 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {title && (

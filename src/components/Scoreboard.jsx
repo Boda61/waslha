@@ -13,7 +13,7 @@ export default function Scoreboard({ room }) {
   };
 
   return (
-    <section className="glass rounded-2xl p-4">
+    <section className="scoreboard glass rounded-2xl p-4">
       <div className="flex items-center justify-between text-center">
         <div className="flex-1">
           <TeamBadge teamId="red" />

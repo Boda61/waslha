@@ -11,8 +11,8 @@ export default function Navbar() {
   };
 
   return (
-    <header className="glass sticky top-0 z-40 border-b border-white/5">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+    <header className="navbar glass sticky top-0 z-40 border-b border-white/5">
+      <div className="navbar-inner mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
         <Link to="/" className="flex items-center gap-2 text-xl font-black text-white">
           <span className="text-2xl">🎮</span>
           وصلها

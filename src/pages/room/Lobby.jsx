@@ -47,7 +47,7 @@ export default function Lobby({
   const canStart = isHost && players.length >= MIN_PLAYERS && startAll === players.length;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8">
+    <div className="lobby-shell mx-auto max-w-5xl px-4 py-8">
       <div className="flex flex-col items-center gap-3">
         <RoomCode code={room.code} />
         <p className="text-sm text-slate-400">
@@ -59,7 +59,7 @@ export default function Lobby({
         {TEAM_IDS.map((tid) => (
           <section
             key={tid}
-            className={`rounded-2xl border-2 p-4 ${
+            className={`lobby-team rounded-2xl border-2 p-4 ${
               tid === 'red' ? 'border-rose-500/30 bg-rose-500/5' : 'border-sky-500/30 bg-sky-500/5'
             }`}
           >
@@ -101,7 +101,7 @@ export default function Lobby({
       </div>
 
       {/* Controls */}
-      <div className="glass mt-8 flex flex-col items-center gap-3 rounded-2xl p-5 sm:flex-row sm:justify-center">
+      <div className="lobby-controls glass mt-8 flex flex-col items-center gap-3 rounded-2xl p-5 sm:flex-row sm:justify-center">
         <button
           onClick={toggleReady}
           disabled={busy === 'ready' || !myPlayer}

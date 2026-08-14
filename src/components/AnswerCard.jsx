@@ -1,7 +1,7 @@
 export default function AnswerCard({ choice, index, state, onClick, disabled }) {
   // state: 'default' | 'selected' | 'correct' | 'incorrect' | 'dimmed'
   const base =
-    'group flex min-h-[88px] flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center transition-all';
+    'answer-card group flex min-h-[88px] flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center transition-all';
   let cls = 'border-white/10 bg-night-800 hover:-translate-y-0.5 hover:border-brand-400/60 hover:bg-night-700 cursor-pointer';
   if (state === 'selected') cls = 'border-gold-400 bg-gold-500/20';
   if (state === 'correct') cls = 'border-emerald-400 bg-emerald-500/20';
@@ -12,6 +12,7 @@ export default function AnswerCard({ choice, index, state, onClick, disabled }) 
     <button
       onClick={() => !disabled && onClick?.(index)}
       disabled={disabled}
+      data-state={state}
       className={`${base} ${cls} ${disabled ? 'cursor-not-allowed' : ''}`}
       aria-label={`إجابة: ${choice}`}
     >
