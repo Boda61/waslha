@@ -16,7 +16,7 @@ export const ROUND_STATUS = {
 };
 
 export const MAX_PLAYERS = 8;
-export const MIN_PLAYERS = 4;
+export const MIN_PLAYERS = 3;
 export const TOTAL_ROUNDS = 6;
 
 export const SCORING = {
