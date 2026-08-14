@@ -27,7 +27,7 @@ export const SCORING = {
 };
 
 export const TIMERS = {
-  answerSeconds: 90,
+  answerSeconds: 30,
   resultSeconds: 8,
 };
 
