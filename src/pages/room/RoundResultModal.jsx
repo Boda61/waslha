@@ -4,6 +4,7 @@ import TeamBadge from '../../components/TeamBadge.jsx';
 
 export default function RoundResultModal({ round, isHost, isLeader, mode, players, onNextRound }) {
   const [count, setCount] = useState(6);
+  const [advanced, setAdvanced] = useState(false);
   const isTimeout = round?.result === 'timeout';
   const winnerTeam = round?.winningTeam;
   const soloMode = mode === 'solo';
@@ -12,15 +13,27 @@ export default function RoundResultModal({ round, isHost, isLeader, mode, player
     : null;
   const canAdvance = isHost || isLeader;
 
-  // Host/leader is responsible for advancing after the countdown.
+  // Only the host or leader advances the game, and only ONCE per result.
+  // Without these guards every client (and every re-render once the count
+  // reaches 0) fires next_round — non-privileged calls get a 400
+  // "انت مش صاحب الغرفة أو القائد" and duplicate calls a 400
+  // "دي مش الجولة الحالية".
   useEffect(() => {
     if (count <= 0) {
+      if (!canAdvance || advanced) return undefined;
+      setAdvanced(true);
       onNextRound?.();
       return undefined;
     }
     const t = setTimeout(() => setCount((c) => c - 1), 1000);
     return () => clearTimeout(t);
-  }, [count, onNextRound]);
+  }, [count, onNextRound, canAdvance, advanced]);
+
+  const handleAdvance = () => {
+    if (advanced) return;
+    setAdvanced(true);
+    onNextRound?.();
+  };
 
   return (
     <Modal open>
@@ -72,8 +85,9 @@ export default function RoundResultModal({ round, isHost, isLeader, mode, player
 
         {canAdvance && (
           <button
-            onClick={onNextRound}
-            className="mt-4 rounded-xl bg-brand-500 px-6 py-2 font-bold text-night-950 transition hover:bg-brand-400"
+            onClick={handleAdvance}
+            disabled={advanced}
+            className="mt-4 rounded-xl bg-brand-500 px-6 py-2 font-bold text-night-950 transition hover:bg-brand-400 disabled:opacity-50"
           >
             الجولة الجاية دلوقتي ⏭
           </button>

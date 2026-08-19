@@ -161,21 +161,23 @@ export default function RoomPage() {
       throw err;
     }
   };
-  const handleNextRound = async () => {
-    try {
-      await nextRound(roomId, room.roundId);
-    } catch (err) {
-      push(err.message, 'error');
-    }
-  };
+  const currentRoundId = room?.roundId;
 
-  const handleExpireRound = async () => {
+  const handleNextRound = useCallback(async () => {
     try {
-      await expireRound(roomId, room.roundId);
+      await nextRound(roomId, currentRoundId);
     } catch (err) {
       push(err.message, 'error');
     }
-  };
+  }, [roomId, currentRoundId, push]);
+
+  const handleExpireRound = useCallback(async () => {
+    try {
+      await expireRound(roomId, currentRoundId);
+    } catch (err) {
+      push(err.message, 'error');
+    }
+  }, [roomId, currentRoundId, push]);
 
   if (notFound) {
     return (
