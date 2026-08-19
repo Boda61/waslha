@@ -12,6 +12,7 @@ export default function RoundResultModal({ round, isHost, isLeader, mode, player
     ? (players || []).find((p) => p.userId === round.winningUserId)
     : null;
   const canAdvance = isHost || isLeader;
+  const points = round?.scoreDelta ?? 0;
 
   // Only the host or leader advances the game, and only ONCE per result.
   // Without these guards every client (and every re-render once the count
@@ -43,9 +44,9 @@ export default function RoundResultModal({ round, isHost, isLeader, mode, player
           {isTimeout
             ? 'محدش فاز بالجولة — 0 نقطة'
             : soloMode
-              ? 'إجابة صح! +100'
+              ? `إجابة صح! +${points}`
               : winnerTeam
-                ? 'إجابة صح! +100'
+                ? `إجابة صح! +${points}`
                 : 'إجابة صح!'}
         </h2>
         <p className="mt-1 text-slate-300">

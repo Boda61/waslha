@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { pointsForDifficulty } from '../../utils/constants.js';
 
 // The two secret images are rendered as visual cards (emoji + theme) so they
 // are fully self-contained. Only the room leader sees them.
@@ -29,7 +30,10 @@ export default function LeaderPanel({ challenge, onClue, submitting, players, my
       <header className="mb-4 text-center">
         <p className="text-sm font-semibold text-gold-300">🕵️ انت القائد — شوف الصورتين السريتين</p>
         <h2 className="mt-1 text-2xl font-black text-white">{challenge.title}</h2>
-        <p className="mt-1 text-sm text-slate-400">الفئة: {challenge.category} • صعوبة {challenge.difficulty}</p>
+        <p className="mt-1 text-sm text-slate-400">
+          الفئة: {challenge.category} • صعوبة {challenge.difficulty} • لو حد جاوب صح:
+          +{pointsForDifficulty(challenge.difficulty)} نقطة
+        </p>
         <p className="mt-2 text-slate-500">الصورتين دول سرّيين — متوريحيش حد 💀</p>
       </header>
 

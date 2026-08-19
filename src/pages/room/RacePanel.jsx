@@ -1,5 +1,6 @@
 import AnswerCard from '../../components/AnswerCard.jsx';
 import TeamBadge from '../../components/TeamBadge.jsx';
+import { pointsForDifficulty } from '../../utils/constants.js';
 
 // The race panel. After the hint is submitted, everyone plays at the same time.
 //   * teams mode: BOTH teams race; the first correct TEAM wins the round.
@@ -28,6 +29,7 @@ export default function RacePanel({
   const winnerUserId = round?.winningUserId;
   const correctIndex = round?.correctIndex;
   const soloMode = mode === 'solo';
+  const roundPoints = round?.scoreDelta ?? pointsForDifficulty(challenge?.difficulty);
 
   const mySubmission = myUid ? answers.find((a) => a.userId === myUid) : null;
   const myChoiceIndex = mySubmission ? mySubmission.choiceIndex : pendingChoice;
@@ -83,7 +85,7 @@ export default function RacePanel({
         <div className="race-status mb-4 rounded-2xl border border-white/10 bg-night-800/50 px-3 py-2 text-center">
           <p className="text-xs text-slate-400">
             {answers.length} {answers.length === 1 ? 'إجابة' : 'إجابات'} اتسجلت — أول واحد
-            يجاوب صح ياخد الـ 100 نقطة
+            يجاوب صح ياخد {roundPoints} نقطة
           </p>
         </div>
       );
@@ -127,7 +129,7 @@ export default function RacePanel({
               soloMode ? (
                 <>
                   <span className="mr-1 text-2xl">{winnerPlayer?.avatar}</span>
-                  {winnerPlayer?.username} كسب الجولة +100 🏆
+                  {winnerPlayer?.username} كسب الجولة +{roundPoints} 🏆
                 </>
               ) : (
                 <>

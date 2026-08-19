@@ -43,8 +43,20 @@ export function minPlayersFor(mode) {
   return mode === 'solo' ? MIN_PLAYERS_SOLO : MIN_PLAYERS_TEAMS;
 }
 
+// Points awarded for a correct answer, based on the challenge difficulty.
+// Must match the DB helper public.difficulty_points(text).
+export const DIFFICULTY_POINTS = {
+  'سهل': 50,
+  'متوسط': 75,
+  'صعب': 100,
+};
+
+export function pointsForDifficulty(difficulty) {
+  return DIFFICULTY_POINTS[difficulty] ?? DIFFICULTY_POINTS['سهل'];
+}
+
 export const SCORING = {
-  correctAnswer: 100,
+  correctAnswer: DIFFICULTY_POINTS['صعب'],
   incorrectAnswer: 0,
   winningBonus: 500,
   correctPrediction: 20,
