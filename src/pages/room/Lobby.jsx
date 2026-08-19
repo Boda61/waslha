@@ -3,7 +3,7 @@ import RoomCode from '../../components/RoomCode.jsx';
 import PlayerCard from '../../components/PlayerCard.jsx';
 import TeamBadge from '../../components/TeamBadge.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
-import { MAX_PLAYERS, MIN_PLAYERS } from '../../utils/constants.js';
+import { MAX_PLAYERS, GAME_MODES, minPlayersFor } from '../../utils/constants.js';
 
 const TEAM_IDS = ['red', 'blue'];
 
@@ -22,6 +22,10 @@ export default function Lobby({
 }) {
   const { push } = useToast();
   const [busy, setBusy] = useState('');
+
+  const soloMode = room?.mode === 'solo';
+  const modeInfo = GAME_MODES[room?.mode] || GAME_MODES.teams;
+  const minPlayers = minPlayersFor(room?.mode);
 
   const assignTeam = async (team) => {
     if (!myPlayer || myPlayer.team === team) return;
@@ -70,100 +74,136 @@ export default function Lobby({
 
   const startAll = players.filter((p) => p.isReady).length;
   const canStart =
-    (isHost || isLeader) && players.length >= MIN_PLAYERS && startAll === players.length;
+    (isHost || isLeader) && players.length >= minPlayers && startAll === players.length;
   const mayLead = isHost || isLeader;
   const isMeLeader = myPlayer?.userId === room?.leaderId;
   const neutralPlayers = players.filter((p) => !p.team);
+
+  const playerActions = (p) => ({
+    onMakeLeader: mayLead && p.userId !== myPlayer?.userId ? makeLeader : undefined,
+    onTransferHost: isHost && p.userId !== myPlayer?.userId ? transferHostTo : undefined,
+  });
+
+  const renderPlayerList = (list, sectionClass, title, countText) => (
+    <section className={`rounded-2xl border-2 p-4 ${sectionClass}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-sm font-black">{title}</span>
+        <span className="text-xs text-slate-400">{countText}</span>
+      </div>
+      <div className="space-y-2">
+        {list.length === 0 && (
+          <p className="rounded-xl bg-night-800/60 px-3 py-4 text-center text-sm text-slate-500">
+            الفريق فاضي — لسه في مكان 🪑
+          </p>
+        )}
+        {list.map((p) => (
+          <PlayerCard
+            key={p.userId}
+            player={p}
+            isMe={p.userId === myPlayer?.userId}
+            isHost={p.userId === room.hostId}
+            busy={busy}
+            {...playerActions(p)}
+          />
+        ))}
+      </div>
+    </section>
+  );
 
   return (
     <div className="lobby-shell mx-auto max-w-5xl px-4 py-8">
       <div className="flex flex-col items-center gap-3">
         <RoomCode code={room.code} />
         <p className="text-sm text-slate-400">
-          {players.length} من {MAX_PLAYERS} لاعب • لازم {MIN_PLAYERS} لاعب عشان نبدأ
+          {modeInfo.emoji} {modeInfo.name} • {players.length} من {MAX_PLAYERS} لاعب •
+          لازم {minPlayers} لاعب عشان نبدأ
         </p>
       </div>
 
-      {/* Neutral leader — outside both teams */}
-      {neutralPlayers.length > 0 && (
-        <section className="mt-6 rounded-2xl border-2 border-gold-500/25 bg-gold-500/5 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm font-black text-gold-300">🕵️ القائد — بره الفريقين</span>
-            <span className="text-xs text-slate-400">{neutralPlayers.length} لاعب</span>
-          </div>
-          <div className="space-y-2">
-            {neutralPlayers.map((p) => (
-              <PlayerCard
-                key={p.userId}
-                player={p}
-                isMe={p.userId === myPlayer?.userId}
-                isHost={p.userId === room.hostId}
-                busy={busy}
-                onMakeLeader={
-                  mayLead && p.userId !== myPlayer?.userId ? makeLeader : undefined
-                }
-                onTransferHost={isHost && p.userId !== myPlayer?.userId ? transferHostTo : undefined}
-              />
+      {/* Solo mode: everyone plays alone, no teams. */}
+      {soloMode ? (
+        <div className="mt-6">
+          {renderPlayerList(
+            players,
+            'border-gold-500/25 bg-gold-500/5',
+            `⚡ ${modeInfo.name} — الكل لعب لوحده`,
+            `${players.length} لاعب`,
+          )}
+          <p className="mt-3 rounded-xl bg-night-800/60 px-4 py-3 text-center text-sm text-slate-400">
+            🕵️ القائد بيشوف الصورتين ويكتب التلميح، وأول واحد يجاوب صح ياخد النقاط.
+            مفيش فرق في المود ده.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Neutral leader — outside both teams */}
+          {neutralPlayers.length > 0 && (
+            <div className="mt-6">
+              {renderPlayerList(
+                neutralPlayers,
+                'border-gold-500/25 bg-gold-500/5',
+                '🕵️ القائد — بره الفريقين',
+                `${neutralPlayers.length} لاعب`,
+              )}
+            </div>
+          )}
+
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            {TEAM_IDS.map((tid) => (
+              <section
+                key={tid}
+                className={`lobby-team rounded-2xl border-2 p-4 ${
+                  tid === 'red'
+                    ? 'border-rose-500/30 bg-rose-500/5'
+                    : 'border-sky-500/30 bg-sky-500/5'
+                }`}
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <TeamBadge teamId={tid} size="lg" />
+                  <span className="text-xs text-slate-400">
+                    {players.filter((p) => p.team === tid).length} لاعب
+                  </span>
+                </div>
+
+                {players.filter((p) => p.team === tid).length === 0 && (
+                  <p className="rounded-xl bg-night-800/60 px-3 py-4 text-center text-sm text-slate-500">
+                    الفريق فاضي — لسه في مكان 🪑
+                  </p>
+                )}
+
+                <div className="space-y-2">
+                  {players
+                    .filter((p) => p.team === tid)
+                    .map((p) => (
+                      <PlayerCard
+                        key={p.userId}
+                        player={p}
+                        isMe={p.userId === myPlayer?.userId}
+                        isHost={p.userId === room.hostId}
+                        busy={busy}
+                        {...playerActions(p)}
+                      />
+                    ))}
+                </div>
+
+                {isMeLeader ? (
+                  <p className="mt-3 w-full rounded-xl border border-gold-500/25 bg-gold-500/10 py-2 text-center text-sm font-bold text-gold-300">
+                    القائد بره الفريقين 🕵️
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => assignTeam(tid)}
+                    disabled={!myPlayer || myPlayer.team === tid || busy === 'team' || room.status !== 'lobby'}
+                    className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 py-2 text-sm font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {myPlayer?.team === tid ? 'انت في الفريق ده ✓' : 'انضم للفريق ده'}
+                  </button>
+                )}
+              </section>
             ))}
           </div>
-        </section>
+        </>
       )}
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        {TEAM_IDS.map((tid) => (
-          <section
-            key={tid}
-            className={`lobby-team rounded-2xl border-2 p-4 ${
-              tid === 'red' ? 'border-rose-500/30 bg-rose-500/5' : 'border-sky-500/30 bg-sky-500/5'
-            }`}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <TeamBadge teamId={tid} size="lg" />
-              <span className="text-xs text-slate-400">
-                {players.filter((p) => p.team === tid).length} لاعب
-              </span>
-            </div>
-
-            {players.filter((p) => p.team === tid).length === 0 && (
-              <p className="rounded-xl bg-night-800/60 px-3 py-4 text-center text-sm text-slate-500">
-                الفريق فاضي — لسه في مكان 🪑
-              </p>
-            )}
-
-            <div className="space-y-2">
-              {players
-                .filter((p) => p.team === tid)
-                .map((p) => (
-                  <PlayerCard
-                    key={p.userId}
-                    player={p}
-                    isMe={p.userId === myPlayer?.userId}
-                    isHost={p.userId === room.hostId}
-                    busy={busy}
-                    onMakeLeader={
-                      mayLead && p.userId !== myPlayer?.userId ? makeLeader : undefined
-                    }
-                    onTransferHost={isHost && p.userId !== myPlayer?.userId ? transferHostTo : undefined}
-                  />
-                ))}
-            </div>
-
-            {isMeLeader ? (
-              <p className="mt-3 w-full rounded-xl border border-gold-500/25 bg-gold-500/10 py-2 text-center text-sm font-bold text-gold-300">
-                القائد بره الفريقين 🕵️
-              </p>
-            ) : (
-              <button
-                onClick={() => assignTeam(tid)}
-                disabled={!myPlayer || myPlayer.team === tid || busy === 'team' || room.status !== 'lobby'}
-                className="mt-3 w-full rounded-xl border border-white/10 bg-white/5 py-2 text-sm font-bold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {myPlayer?.team === tid ? 'انت في الفريق ده ✓' : 'انضم للفريق ده'}
-              </button>
-            )}
-          </section>
-        ))}
-      </div>
 
       {/* Controls */}
       <div className="lobby-controls glass mt-8 flex flex-col items-center gap-3 rounded-2xl p-5 sm:flex-row sm:justify-center">
@@ -185,8 +225,8 @@ export default function Lobby({
             disabled={!canStart}
             className="w-full rounded-xl bg-gold-500 px-6 py-3 font-black text-night-950 transition hover:bg-gold-400 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
           >
-            {players.length < MIN_PLAYERS
-              ? `لازم ${MIN_PLAYERS} لاعب على الأقل`
+            {players.length < minPlayers
+              ? `لازم ${minPlayers} لاعب على الأقل`
               : startAll === players.length
                 ? 'ابدأ اللعبة 🚀'
                 : `${startAll}/${players.length} جاهزين`}

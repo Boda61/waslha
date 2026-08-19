@@ -2,10 +2,14 @@ import { useEffect, useState } from 'react';
 import Modal from '../../components/Modal.jsx';
 import TeamBadge from '../../components/TeamBadge.jsx';
 
-export default function RoundResultModal({ round, isHost, isLeader, onNextRound }) {
+export default function RoundResultModal({ round, isHost, isLeader, mode, players, onNextRound }) {
   const [count, setCount] = useState(6);
   const isTimeout = round?.result === 'timeout';
   const winnerTeam = round?.winningTeam;
+  const soloMode = mode === 'solo';
+  const winnerPlayer = round?.winningUserId
+    ? (players || []).find((p) => p.userId === round.winningUserId)
+    : null;
   const canAdvance = isHost || isLeader;
 
   // Host/leader is responsible for advancing after the countdown.
@@ -25,16 +29,20 @@ export default function RoundResultModal({ round, isHost, isLeader, onNextRound 
         <h2 className="mt-2 text-3xl font-black text-white">
           {isTimeout
             ? 'محدش فاز بالجولة — 0 نقطة'
-            : winnerTeam
+            : soloMode
               ? 'إجابة صح! +100'
-              : 'إجابة صح!'}
+              : winnerTeam
+                ? 'إجابة صح! +100'
+                : 'إجابة صح!'}
         </h2>
         <p className="mt-1 text-slate-300">
           {isTimeout
             ? 'الوقت خلص ومحدش عرف يجيبها صح 🤷'
-            : winnerTeam
-              ? 'يا سلام! الفريق اللي فاز جه على طول 😎'
-              : 'إجابة صحيحة اتسجلت!'}
+            : soloMode
+              ? `يا سلام! ${winnerPlayer?.username ?? 'اللاعب'} جابها الأول 😎`
+              : winnerTeam
+                ? 'يا سلام! الفريق اللي فاز جه على طول 😎'
+                : 'إجابة صحيحة اتسجلت!'}
         </p>
 
         <div className="mt-4 rounded-2xl bg-night-800 p-4 text-right">
@@ -44,9 +52,16 @@ export default function RoundResultModal({ round, isHost, isLeader, onNextRound 
           </p>
         </div>
 
-        {winnerTeam && (
+        {!isTimeout && (winnerTeam || winnerPlayer) && (
           <div className="mt-4 flex items-center justify-center gap-3">
-            <TeamBadge teamId={winnerTeam} size="lg" />
+            {soloMode ? (
+              <span className="inline-flex items-center gap-2 rounded-full bg-gold-500/15 px-5 py-2 text-lg font-black text-gold-300 ring-1 ring-gold-500/30">
+                <span className="text-2xl">{winnerPlayer?.avatar}</span>
+                {winnerPlayer?.username}
+              </span>
+            ) : (
+              <TeamBadge teamId={winnerTeam} size="lg" />
+            )}
           </div>
         )}
 

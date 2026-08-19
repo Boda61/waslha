@@ -46,6 +46,7 @@ export default function GameScreen({
     );
   }
 
+  const soloMode = room.mode === 'solo';
   const myUid = myPlayer.userId;
   const myTeam = myPlayer.team;
   const revealed = round.status === 'revealed';
@@ -53,7 +54,7 @@ export default function GameScreen({
   const inCluePhase = round.status === 'leader';
   const inRace = round.status === 'clue_submitted';
   const leaderLocked = isLeader; // The leader NEVER answers, even when alone.
-  const canChat = !revealed && !!myTeam && inRace;
+  const canChat = !revealed && inRace && (soloMode || !!myTeam);
 
   const redMembers = players.filter((p) => p.team === 'red');
   const blueMembers = players.filter((p) => p.team === 'blue');
@@ -122,7 +123,7 @@ export default function GameScreen({
           />
         );
       }
-      if (!myTeam) {
+      if (!myTeam && !soloMode) {
         return (
           <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-night-800 px-6 py-16 text-center">
             <span className="text-5xl">🎯</span>
@@ -153,7 +154,7 @@ export default function GameScreen({
       );
     }
 
-    // inRace (clue_submitted): both teams play at the same time.
+    // inRace (clue_submitted): everyone plays at the same time.
     return (
       <RacePanel
         challenge={challenge}
@@ -161,6 +162,8 @@ export default function GameScreen({
         myUid={myUid}
         myTeam={myTeam}
         isLeader={isLeader}
+        mode={room.mode}
+        players={players}
         answers={answers}
         onAnswer={handleAnswer}
         submitting={answerSubmitting}
@@ -207,14 +210,14 @@ export default function GameScreen({
     if (revealed) return 'نتيجة الجولة 🎬';
     if (ended) return 'اللعبة خلصت 🏁';
     if (inCluePhase) return 'القائد بيجهز التلميح 🕵️';
-    return 'السباق شغال بين الفريقين ⚡';
+    return soloMode ? 'السباق شغال — كل واحد لوحده ⚡' : 'السباق شغال بين الفريقين ⚡';
   };
 
   return (
     <div className="game-shell mx-auto max-w-6xl px-4 py-6">
       {/* Scoreboard */}
       <div className="gs-score mb-4">
-        <Scoreboard room={room} />
+        <Scoreboard room={room} mode={room.mode} players={players} />
       </div>
 
       {/* Leave + chat toggle */}
@@ -266,15 +269,15 @@ export default function GameScreen({
         </div>
       </div>
 
-      {/* Neutral leader — outside both teams */}
-      {neutralMembers.length > 0 && (
-        <div className="mb-4 rounded-2xl border-2 border-gold-500/25 bg-gold-500/5 p-3">
+      {/* Roster */}
+      {soloMode ? (
+        <section className="mb-4 rounded-2xl border-2 border-gold-500/25 bg-gold-500/5 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-black text-gold-300">🕵️ القائد — بره الفريقين</span>
-            <span className="text-xs text-slate-400">{neutralMembers.length} لاعب</span>
+            <span className="text-sm font-black text-gold-300">⚡ اللاعبين — كل واحد لوحده</span>
+            <span className="text-xs text-slate-400">{players.length} لاعب</span>
           </div>
           <div className="space-y-2">
-            {neutralMembers.map((p) => (
+            {players.map((p) => (
               <PlayerCard
                 key={p.userId}
                 player={p}
@@ -284,14 +287,37 @@ export default function GameScreen({
               />
             ))}
           </div>
-        </div>
-      )}
+        </section>
+      ) : (
+        <>
+          {/* Neutral leader — outside both teams */}
+          {neutralMembers.length > 0 && (
+            <div className="mb-4 rounded-2xl border-2 border-gold-500/25 bg-gold-500/5 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-black text-gold-300">🕵️ القائد — بره الفريقين</span>
+                <span className="text-xs text-slate-400">{neutralMembers.length} لاعب</span>
+              </div>
+              <div className="space-y-2">
+                {neutralMembers.map((p) => (
+                  <PlayerCard
+                    key={p.userId}
+                    player={p}
+                    isMe={p.userId === myUid}
+                    isHost={room.hostId === p.userId}
+                    isLeader={p.userId === room.leaderId}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* Teams */}
-      <div className="gs-teams mb-4 grid gap-4 sm:grid-cols-2">
-        {teamSection('red')}
-        {teamSection('blue')}
-      </div>
+          {/* Teams */}
+          <div className="gs-teams mb-4 grid gap-4 sm:grid-cols-2">
+            {teamSection('red')}
+            {teamSection('blue')}
+          </div>
+        </>
+      )}
 
       {/* Main gameplay */}
       <div className="gs-main">
@@ -305,6 +331,8 @@ export default function GameScreen({
           round={round}
           isHost={room.hostId === myUid}
           isLeader={isLeader}
+          mode={room.mode}
+          players={players}
           onNextRound={onNextRound}
         />
       )}

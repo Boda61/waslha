@@ -3,8 +3,8 @@ import { friendlyError, camelcaseKeys } from '../utils/helpers.js';
 
 // ── Server-validated (RPC) actions ──────────────────────────────────────────
 
-export async function createRoom() {
-  const { data, error } = await supabase.rpc('create_room', {});
+export async function createRoom(mode = 'teams') {
+  const { data, error } = await supabase.rpc('create_room', { p_mode: mode });
   if (error) throw new Error(friendlyError(error, 'مش قدرنا نعمل الغرفة.'));
   return camelcaseKeys(data?.[0]);
 }

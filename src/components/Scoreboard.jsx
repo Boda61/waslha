@@ -1,6 +1,50 @@
 import TeamBadge from './TeamBadge.jsx';
 
-export default function Scoreboard({ room }) {
+export default function Scoreboard({ room, mode, players }) {
+  if (mode === 'solo') {
+    const leaderId = room?.leaderId;
+    const ranked = (players || [])
+      .filter((p) => p.userId !== leaderId)
+      .sort((a, b) => (b.score || 0) - (a.score || 0));
+
+    return (
+      <section className="scoreboard glass rounded-2xl p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-black text-gold-300">⚡ ترتيب اللاعبين</h3>
+          <span className="text-xs text-slate-400">{ranked.length} لاعب</span>
+        </div>
+        {ranked.length === 0 ? (
+          <p className="py-3 text-center text-xs text-slate-500">لسه مفيش لاعيبة في السباق.</p>
+        ) : (
+          <ol className="space-y-2">
+            {ranked.map((p, i) => (
+              <li
+                key={p.userId}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2 ${
+                  i === 0 ? 'bg-gold-500/10 ring-1 ring-gold-500/30' : 'bg-night-800/50'
+                }`}
+              >
+                <span className="w-6 text-center text-lg">
+                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+                </span>
+                <span className="text-lg">{p.avatar}</span>
+                <span className="min-w-0 flex-1 truncate text-sm font-bold text-white">
+                  {p.username}
+                </span>
+                <span className="font-black text-gold-300">{p.score ?? 0}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+        {leaderId && (
+          <p className="mt-3 rounded-lg bg-night-800/50 px-3 py-2 text-center text-[11px] text-slate-500">
+            🕵️ القائد خارج السباق — مش بياخد نقاط.
+          </p>
+        )}
+      </section>
+    );
+  }
+
   const red = room?.redScore ?? 0;
   const blue = room?.blueScore ?? 0;
   const total = red + blue || 1;
