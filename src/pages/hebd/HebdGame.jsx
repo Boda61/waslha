@@ -159,6 +159,7 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
   });
 
   const renderPlayerCard = (player, role) => {
+    if (!player) return null; // players may not have arrived yet
     const isMe = player.userId === myUserId;
     const isOnTurn = role === 'guesser';
     return (
@@ -247,6 +248,17 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
   const roundNumber = round?.roundNumber ?? match?.currentRound ?? '--';
   const totalRounds = match?.totalRounds ?? room?.maxPlayers;
   const difficultyClass = DIFFICULTY_COLORS[item?.difficulty] || DIFFICULTY_COLORS['سهل'];
+
+  // Players subscription can lag a moment behind the round — wait for both.
+  if (!presenter || !guesser) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-16 text-center">
+        <span className="animate-pulse text-5xl">👥</span>
+        <h1 className="mt-4 text-2xl font-black text-white">بنحضّر اللاعبين...</h1>
+        <p className="mt-2 text-slate-400">استنى لحظة — العبين لسه بيوصّلوا.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
