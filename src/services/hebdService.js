@@ -67,7 +67,39 @@ export async function startHebdMatch(roomId) {
   return data?.[0]?.ok ?? false;
 }
 
-// ── Realtime subscriptions ──────────────────────────────────────────────────
+// ── Gameplay RPCs ───────────────────────────────────────────────────────────
+
+// Guesser guesses; the SERVER decides correctness. Reveals on a hit.
+export async function submitHebdGuess(roomId, guess) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  const clean = (guess || '').trim();
+  if (!clean) throw new Error('اكتب تخمين الأول.');
+  if (clean.length > 100) throw new Error('التخمين طويل أوي (الحد 100 حرف).');
+
+  const { data, error } = await supabase.rpc('submit_hebd_guess', {
+    p_room_id: roomId,
+    p_guess: clean,
+  });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نسجّل التخمين.'));
+  return camelcaseKeys(data?.[0]);
+}
+
+// Timeout reveal (idempotent, race-safe). Must only be called when the
+// authoritative ends_at has passed — the server enforces that.
+export async function expireHebdRound(roomId) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  const { data, error } = await supabase.rpc('expire_hebd_round', { p_room_id: roomId });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نغلق الجولة.'));
+  return camelcaseKeys(data?.[0]);
+}
+
+// Revealed round -> next round, or end of match on the final round.
+export async function nextHebdRound(roomId) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  const { data, error } = await supabase.rpc('next_hebd_round', { p_room_id: roomId });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نبدأ الجولة الجاية.'));
+  return camelcaseKeys(data?.[0]);
+}
 
 // Match row (hebd_matches): status transitions + current round.
 // Falls back to an initial fetch so the lobby always renders with data.
@@ -107,4 +139,56 @@ export function subscribeHebdMatch(roomId, onData, onError) {
     });
 
   return () => supabase.removeChannel(channel);
+}
+
+// Current round row (hebd_rounds): live status / answer / roles.
+export function subscribeHebdRound(roomId, roundId, onData, onError) {
+  if (!roundId) {
+    onError?.(new Error('مفيش جولة حالية.'));
+    return () => {};
+  }
+
+  const channel = supabase
+    .channel(`public:hebd_rounds:id=${roundId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'hebd_rounds', filter: `id=eq.${roundId}` },
+      (payload) => {
+        if (payload.eventType === 'DELETE') {
+          onData(null);
+        } else {
+          onData(camelcaseKeys(payload.new));
+        }
+      },
+    )
+    .on('error', (err) => onError?.(err))
+    .subscribe();
+
+  supabase
+    .from('hebd_rounds')
+    .select('*')
+    .eq('id', roundId)
+    .single()
+    .then(({ data, error }) => {
+      if (error && error.code !== 'PGRST116') {
+        onError?.(error);
+        return;
+      }
+      onData(camelcaseKeys(data));
+    });
+
+  return () => supabase.removeChannel(channel);
+}
+
+// Public item metadata (image + difficulty) — never a secret answer.
+export async function fetchHebdItem(itemId) {
+  if (!itemId) return null;
+  const { data, error } = await supabase
+    .from('hebd_items')
+    .select('id, image_emoji, image_url, difficulty')
+    .eq('id', itemId)
+    .single();
+
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نجيب العنصر.'));
+  return camelcaseKeys(data);
 }

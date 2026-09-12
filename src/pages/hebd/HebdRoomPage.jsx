@@ -4,8 +4,15 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import LoadingScreen from '../../components/LoadingScreen.jsx';
 import HebdLobby from './HebdLobby.jsx';
+import HebdGame from './HebdGame.jsx';
 import { subscribeRoom, subscribePlayers, leaveRoom } from '../../services/roomService.js';
-import { subscribeHebdMatch, setHebdReady, startHebdMatch } from '../../services/hebdService.js';
+import {
+  subscribeHebdMatch,
+  subscribeHebdRound,
+  fetchHebdItem,
+  setHebdReady,
+  startHebdMatch,
+} from '../../services/hebdService.js';
 
 export default function HebdRoomPage() {
   const { roomId } = useParams();
@@ -15,6 +22,9 @@ export default function HebdRoomPage() {
 
   const [room, setRoom] = useState(null);
   const [players, setPlayers] = useState([]);
+  const [match, setMatch] = useState(null);
+  const [round, setRound] = useState(null);
+  const [item, setItem] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [busy, setBusy] = useState('');
 
@@ -41,7 +51,7 @@ export default function HebdRoomPage() {
     const unsubPlayers = subscribePlayers(roomId, setPlayers);
     const unsubMatch = subscribeHebdMatch(
       roomId,
-      () => {},
+      setMatch,
       (err) => console.error('hebd_matches subscription error:', err),
     );
 
@@ -51,6 +61,38 @@ export default function HebdRoomPage() {
       unsubMatch();
     };
   }, [roomId]);
+
+  // Live round subscription once the match is playing and has a round.
+  const playing = !!room && room.status === 'playing';
+  useEffect(() => {
+    if (!playing || !match?.currentRoundId) {
+      setRound(null);
+      return undefined;
+    }
+    return subscribeHebdRound(
+      roomId,
+      match.currentRoundId,
+      setRound,
+      (err) => console.error('hebd_rounds subscription error:', err),
+    );
+  }, [playing, match?.currentRoundId, roomId]);
+
+  // Item metadata for the presenter view (fetched per round).
+  useEffect(() => {
+    if (!round?.itemId) {
+      setItem(null);
+      return undefined;
+    }
+    let mounted = true;
+    fetchHebdItem(round.itemId)
+      .then((data) => {
+        if (mounted) setItem(data);
+      })
+      .catch((err) => console.error('fetchHebdItem error:', err));
+    return () => {
+      mounted = false;
+    };
+  }, [round?.itemId]);
 
   const myUserId = user?.id;
   const myPlayer = myUserId ? players.find((p) => p.userId === myUserId) : null;
@@ -145,28 +187,18 @@ export default function HebdRoomPage() {
     );
   }
 
-  // Playing / ended — the game screen ships in a later phase.
-  // We only ever render it after the realtime update arrives, and the
-  // server-controlled status is the single source of truth here.
+  // Playing / ended → the real gameplay screen (server status drives this).
   if (room.status !== 'lobby') {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 text-center">
-        <span className="text-6xl">🎮</span>
-        <h1 className="mt-4 text-2xl font-black text-white">
-          {room.status === 'playing' ? 'اللعبة بدأت!' : 'اللعبة خلصت'}
-        </h1>
-        <p className="mt-2 leading-relaxed text-slate-400">
-          {room.status === 'playing'
-            ? 'شاشة اللعب بتاعة هبد في هبد جاية في التحديث الجاي — استنى علينا 🌚'
-            : 'الماتش خلص — شاشة النتائج جاية قريب.'}
-        </p>
-        <button
-          onClick={() => navigate('/hebd')}
-          className="mt-6 rounded-xl bg-brand-500 px-6 py-3 font-bold text-night-950 hover:bg-brand-400"
-        >
-          ارجع لهبد في هبد
-        </button>
-      </div>
+      <HebdGame
+        room={room}
+        players={players}
+        match={match}
+        round={round}
+        item={item}
+        myPlayer={myPlayer}
+        onLeave={handleLeave}
+      />
     );
   }
 
