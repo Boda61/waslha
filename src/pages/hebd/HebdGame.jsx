@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import Avatar from '../../components/Avatar.jsx';
+import VoiceChatControls from '../../components/VoiceChatControls.jsx';
+import useVoiceCall from '../../hooks/useVoiceCall.js';
 import {
   submitHebdGuess,
   expireHebdRound,
@@ -75,6 +77,17 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
   const isGuesser = !!round && round.guesserId === myUserId;
   const revealed = !!round && round.status === 'revealed';
   const matchEnded = !!match && match.status === 'ended';
+
+  // Live voice chat with the other player (WebRTC + Realtime signaling).
+  const peerPlayer = players.find((p) => p.userId !== myUserId) || null;
+  const peerUserId = peerPlayer?.userId || null;
+  const voice = useVoiceCall({
+    enabled: !!roomId && !matchEnded,
+    roomId: roomId || null,
+    myUserId: myUserId || null,
+    peerUserId,
+    onError: (msg) => push(msg, 'error'),
+  });
 
   const handleExpire = useCallback(async () => {
     if (!roomId) return;
@@ -260,6 +273,19 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {renderPlayerCard(presenter, 'presenter')}
         {renderPlayerCard(guesser, 'guesser')}
+      </div>
+
+      {/* Voice chat */}
+      <div className="mt-3">
+        <VoiceChatControls
+          status={voice.status}
+          micOn={voice.micOn}
+          remoteSpeaking={voice.remoteSpeaking}
+          error={voice.error}
+          peerName={peerPlayer?.username || 'اللاعب الآخر'}
+          onStart={voice.startCall}
+          onToggleMute={voice.toggleMute}
+        />
       </div>
 
       {/* Round body */}
