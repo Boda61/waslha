@@ -1,60 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import Avatar from '../../components/Avatar.jsx';
 import VoiceChatControls from '../../components/VoiceChatControls.jsx';
 import useVoiceCall from '../../hooks/useVoiceCall.js';
-import {
-  submitHebdGuess,
-  expireHebdRound,
-  nextHebdRound,
-} from '../../services/hebdService.js';
-
-// Counts down to the authoritative ends_at. Never mutates DB state by
-// itself — when it hits zero it asks the server via expire_hebd_round.
-function useRoundCountdown(roomId, roundId, roundStatus, endsAtRaw, onExpire) {
-  const [remaining, setRemaining] = useState(null);
-  const firedAtZero = useRef(false);
-
-  useEffect(() => {
-    if (!roundId || roundStatus === 'revealed') {
-      setRemaining(null);
-      firedAtZero.current = false;
-      return undefined;
-    }
-    const endsAtMs = endsAtRaw ? new Date(endsAtRaw).getTime() : null;
-    if (!endsAtMs) return undefined;
-
-    const tick = () => {
-      const ms = endsAtMs - Date.now();
-      setRemaining(Math.max(0, Math.ceil(ms / 1000)));
-    };
-    tick();
-    const id = setInterval(tick, 500);
-    return () => clearInterval(id);
-  }, [roundId, roundStatus, endsAtRaw]);
-
-  // Fire the RPC exactly once per active round.
-  useEffect(() => {
-    if (!roomId || !roundId || roundStatus === 'revealed') {
-      firedAtZero.current = false;
-      return;
-    }
-    if (remaining === 0 && !firedAtZero.current) {
-      firedAtZero.current = true;
-      onExpire();
-    }
-  }, [roomId, roundId, roundStatus, remaining, onExpire]);
-
-  return remaining;
-}
-
-function formatTime(secs) {
-  if (secs === null || secs === undefined) return '--';
-  const m = Math.floor(secs / 60);
-  const s = secs % 60;
-  return `${m}:${String(s).padStart(2, '0')}`;
-}
+import { submitHebdGuess, nextHebdRound } from '../../services/hebdService.js';
 
 const DIFFICULTY_COLORS = {
   سهل: 'text-emerald-300 bg-emerald-500/10 ring-emerald-400/30',
@@ -62,10 +12,11 @@ const DIFFICULTY_COLORS = {
   صعب: 'text-rose-300 bg-rose-500/10 ring-rose-400/30',
 };
 
-export default function HebdGame({ room, players, match, round, item, myPlayer, onLeave }) {
+export default function HebdGame({ room, players, match, round, itemsById, myPlayer, onLeave }) {
   const navigate = useNavigate();
   const { push } = useToast();
 
+  const [guessOpen, setGuessOpen] = useState(false);
   const [guess, setGuess] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [advancing, setAdvancing] = useState(false);
@@ -73,8 +24,6 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
 
   const myUserId = myPlayer?.userId;
   const roomId = room?.id;
-  const isPresenter = !!round && round.presenterId === myUserId;
-  const isGuesser = !!round && round.guesserId === myUserId;
   const revealed = !!round && round.status === 'revealed';
   const matchEnded = !!match && match.status === 'ended';
 
@@ -89,24 +38,7 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
     onError: (msg) => push(msg, 'error'),
   });
 
-  const handleExpire = useCallback(async () => {
-    if (!roomId) return;
-    try {
-      await expireHebdRound(roomId);
-    } catch (err) {
-      console.error('expire_hebd_round error:', err);
-      // Idempotent + non-blocking: realtime will settle the state anyway.
-    }
-  }, [roomId]);
-
-  const remaining = useRoundCountdown(
-    roomId,
-    round?.id,
-    round?.status,
-    round?.endsAt,
-    handleExpire,
-  );
-
+  // ── Actions (server-authoritative — client never decides correctness) ──
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!roomId || submitting || !guess.trim()) return;
@@ -114,12 +46,11 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
     try {
       const res = await submitHebdGuess(roomId, guess);
       if (res && !res.isCorrect) {
-        // Wrong guess — round stays open, user may try again.
+        // Wrong guess — round stays open, everyone keeps talking.
         setGuess('');
-        push('غلط 😅 جرب تاني', 'info');
+        push('غلط 😅 الصورة لسه مكانها — حاول تاني', 'info');
       }
-      // On a correct guess the server reveals the round; the realtime
-      // subscription flips the UI to the revealed screen automatically.
+      // Correct guess → server reveals the round; realtime flips the UI.
     } catch (err) {
       console.error('submit_hebd_guess error:', err);
       push(err.message, 'error');
@@ -133,6 +64,8 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
     setAdvancing(true);
     try {
       await nextHebdRound(roomId);
+      setGuessOpen(false);
+      setGuess('');
       // Server creates the next round or ends the match — realtime handles UI.
     } catch (err) {
       console.error('next_hebd_round error:', err);
@@ -157,39 +90,9 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
     const bHost = b.userId === room?.hostId ? 0 : 1;
     return aHost - bHost;
   });
-
-  const renderPlayerCard = (player, role) => {
-    if (!player) return null; // players may not have arrived yet
-    const isMe = player.userId === myUserId;
-    const isOnTurn = role === 'guesser';
-    return (
-      <div
-        className={`glass rounded-2xl border-2 p-4 transition ${
-          isOnTurn ? 'border-brand-400/60 bg-brand-500/10' : 'border-white/10'
-        } ${isMe ? 'ring-1 ring-white/20' : ''}`}
-      >
-        <div className="flex items-center gap-3">
-          <Avatar avatar={player.avatar} size="md" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-black text-white">
-              {player.username}
-              {isMe && <span className="mr-1 text-sm text-brand-300">(انت)</span>}
-            </p>
-            <p className={`text-xs font-bold ${isOnTurn ? 'text-brand-300' : 'text-slate-400'}`}>
-              {isOnTurn ? 'دوره يخمّن 🎯' : 'مش دوره دلوقتي'}
-            </p>
-          </div>
-          <div className="text-left">
-            <p className="text-xl font-black text-white">{player.score}</p>
-            <p className="text-[10px] text-slate-500">نقطة</p>
-          </div>
-        </div>
-        <span className="mt-3 inline-block rounded-lg bg-night-700 px-2 py-0.5 text-[11px] font-bold text-slate-300">
-          {role === 'presenter' ? '🎤 العارض' : '🔎 المخمّن'}
-        </span>
-      </div>
-    );
-  };
+  
+  const roundNumber = round?.roundNumber ?? match?.currentRound ?? '--';
+    const totalRounds = match?.totalRounds ?? '--';
 
   // ── Match ended ───────────────────────────────────────────────────────────
   if (matchEnded || room?.status === 'ended') {
@@ -211,7 +114,7 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
                 key={p.userId}
                 className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
               >
-                <span className="flex items-center gap-2 font-bold text-white">
+                <span className="flex items-center gap-2 font-black text-white">
                   <Avatar avatar={p.avatar} size="sm" />
                   {p.username}
                   {p.userId === match?.winnerUserId && ' 👑'}
@@ -243,14 +146,8 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
     );
   }
 
-  const presenter = players.find((p) => p.userId === round?.presenterId);
-  const guesser = players.find((p) => p.userId === round?.guesserId);
-  const roundNumber = round?.roundNumber ?? match?.currentRound ?? '--';
-  const totalRounds = match?.totalRounds ?? room?.maxPlayers;
-  const difficultyClass = DIFFICULTY_COLORS[item?.difficulty] || DIFFICULTY_COLORS['سهل'];
-
-  // Players subscription can lag a moment behind the round — wait for both.
-  if (!presenter || !guesser) {
+  // Players subscription can lag behind the round — wait for both.
+  if (players.length < 2) {
     return (
       <div className="mx-auto max-w-md px-4 py-16 text-center">
         <span className="animate-pulse text-5xl">👥</span>
@@ -260,35 +157,92 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
     );
   }
 
+  const renderPlayerCard = (player, subtitle, showImage, item) => {
+    if (!player) return null;
+    const isMe = player.userId === myUserId;
+    const itemDiffClass = DIFFICULTY_COLORS[item?.difficulty] || DIFFICULTY_COLORS['سهل'];
+    return (
+      <div
+        className={`glass rounded-2xl border-2 p-4 transition ${
+          isMe ? 'border-brand-400/60 bg-brand-500/10 ring-1 ring-white/20' : 'border-white/10'
+        }`}
+      >
+        <div className="flex items-center gap-3">
+          <Avatar avatar={player.avatar} size="md" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-black text-white">
+              {player.username}
+              {isMe && <span className="mr-1 text-sm text-brand-300">(انت)</span>}
+            </p>
+            <p className="text-xs font-bold text-slate-400">{subtitle}</p>
+          </div>
+          <div className="text-left">
+            <p className="text-xl font-black text-white">{player.score}</p>
+            <p className="text-[10px] text-slate-500">نقطة</p>
+          </div>
+        </div>
+
+        {/* Only the owner sees the real image; others see a locked placeholder */}
+        {showImage ? (
+          <div className="mt-3 mx-auto flex max-w-[180px] flex-col items-center gap-2 rounded-xl border border-white/10 bg-night-800/40 p-3">
+            {item?.imageUrl ? (
+              <img
+                src={item.imageUrl}
+                alt="العنصر الخاص بك"
+                className="max-h-32 w-auto rounded-md object-contain"
+              />
+            ) : (
+              <span className="text-4xl">{item?.imageEmoji || '🖼️'}</span>
+            )}
+            <span
+              className={`rounded-lg px-2 py-0.5 text-[11px] font-black ring-1 ${itemDiffClass}`}
+            >
+              {item?.difficulty || 'سهل'}
+            </span>
+          </div>
+        ) : (
+          <div className="mt-3 rounded-xl border border-white/10 bg-night-800/40 p-6 text-center">
+            <span className="text-3xl">🤫</span>
+            <p className="mt-1 text-[11px] font-bold text-slate-400">صورته السرية</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      {/* Header */}
-      <div className="glass sticky top-16 z-30 flex items-center justify-between gap-2 rounded-2xl px-4 py-3">
+      {/* Header — no timer; rounds run until someone guesses */}
+      <header className="glass sticky top-16 z-30 flex items-center justify-between gap-2 rounded-2xl px-4 py-3">
         <span className="rounded-lg bg-gold-500/15 px-2.5 py-1 text-sm font-black text-gold-300">
           الجولة {roundNumber} / {totalRounds}
         </span>
         <span className="text-sm font-bold text-slate-300">🎮 هبد في هبد</span>
         <span
-          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-black ${
+          className={`rounded-lg px-2.5 py-1 text-sm font-black ${
             revealed
               ? 'bg-slate-500/15 text-slate-300'
-              : remaining <= 10
-                ? 'bg-rose-500/20 text-rose-300 animate-pulse'
-                : 'bg-brand-500/15 text-brand-300'
+              : 'bg-brand-500/15 text-brand-300'
           }`}
         >
-          ⏱️ {formatTime(remaining)}
+          {revealed ? '✅ الجواب كشف' : '🗣️ تواصل وخمن'}
         </span>
-      </div>
+      </header>
 
-      {/* Players */}
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {renderPlayerCard(presenter, 'presenter')}
-        {renderPlayerCard(guesser, 'guesser')}
-      </div>
+      {/* Players — both see their own image */}
+      <section className="mt-4 grid gap-3 sm:grid-cols-2">
+        {sortedPlayers.map((p) =>
+          renderPlayerCard(
+            p,
+            p.userId === round.presenterId ? '🎤 العارض' : '🔎 المخمّن',
+            p.userId === myUserId,
+            p.userId === round.presenterId ? itemsById?.[round.itemId] : itemsById?.[round.item2Id],
+          ),
+        )}
+      </section>
 
       {/* Voice chat */}
-      <div className="mt-3">
+      <section className="mt-3">
         <VoiceChatControls
           status={voice.status}
           micOn={voice.micOn}
@@ -298,91 +252,84 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
           onStart={voice.startCall}
           onToggleMute={voice.toggleMute}
         />
-      </div>
+      </section>
 
       {/* Round body */}
-      <div className="mt-4">
-        {revealed ? (
+      <section className="mt-4">
+          {revealed ? (
+          // ── Reveal / result ──
           <div className="animate-pop glass rounded-3xl p-6 text-center sm:p-8">
-            <span className="text-5xl">{round.guesserWon ? '🎉' : '⏰'}</span>
+            <span className="text-5xl">{round.guesserWon ? '🎉' : '⏱️'}</span>
             <h2 className="mt-2 text-2xl font-black text-white">
-              {round.guesserWon ? 'عرفها المخمّن!' : 'الوقت خلص'}
+              {round.guesserWon ? 'عرفها المخمّن!' : 'انتهت الجولة'}
             </h2>
             <p className="mt-1 text-sm text-slate-400">الجواب الصحيح كان:</p>
             <p className="mt-2 text-3xl font-black text-brand-300">{round.answer}</p>
-            {round.guesserWon && (
+            {round.winnerUserId && (
               <p className="mt-2 text-sm font-bold text-slate-300">
-                {guesser?.username} كسب النقطة 🏅
+                {players.find((p) => p.userId === round.winnerUserId)?.username || 'لاعب'}{' '}
+                كسب النقطة 🏅
               </p>
             )}
             <button
               onClick={handleNext}
               disabled={advancing}
-              className="mt-6 w-full rounded-xl bg-gold-500 py-3 text-lg font-black text-night-950 transition hover:bg-gold-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-6 w-full rounded-xl bg-brand-500 py-3 text-lg font-black text-night-950 transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {advancing ? 'بنبدأ الجولة الجاية...' : 'الجولة الجاية ➡️'}
+              {advancing ? 'بنتحرك للجولة...' : 'الجولة الجاية ➡️'}
             </button>
           </div>
-        ) : isGuesser ? (
-          /* ── Guesser: guess form ── */
-          <div className="glass rounded-3xl p-6 sm:p-8">
-            <div className="text-center">
-              <span className="text-4xl">🎯</span>
-              <h2 className="mt-2 text-2xl font-black text-white">
-                دورك يا {myPlayer?.username}!
-              </h2>
-              <p className="mt-1 text-sm text-slate-400">
-                {presenter?.username} بيوصفلك حاجة — إيه رأيك؟
-              </p>
-            </div>
-            <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+        ) : guessOpen ? (
+          // ── My guess form ──
+          <form onSubmit={handleSubmit} className="glass rounded-3xl p-6 sm:p-8">
+            <h2 className="text-center text-2xl font-black text-white">اكتب تخمينك</h2>
+            <p className="mt-1 text-center text-sm text-slate-400">
+              اكتب إجابتك بالإنجليزية أو العربية — السيرفر بيتحقق.
+            </p>
+            <div className="mt-4 space-y-3">
               <input
                 autoFocus
                 value={guess}
                 onChange={(e) => setGuess(e.target.value)}
-                placeholder="اكتب تخمينك هنا..."
+                placeholder="تخمينك؟..."
                 maxLength={100}
                 autoComplete="off"
                 className="w-full rounded-xl border border-white/10 bg-night-800 px-4 py-4 text-center text-lg font-bold text-white outline-none transition focus:border-brand-400"
               />
-              <button
-                type="submit"
-                disabled={submitting || !guess.trim() || remaining === 0}
-                className="w-full rounded-xl bg-brand-500 py-3 text-lg font-black text-night-950 transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {submitting ? 'بنحسب...' : 'تخمين 🔎'}
-              </button>
-            </form>
-          </div>
-        ) : isPresenter ? (
-          /* ── Presenter: item to describe ── */
-          <div className="glass rounded-3xl p-6 text-center sm:p-8">
-            <span className="text-5xl">🎤</span>
-            <h2 className="mt-2 text-2xl font-black text-white">دورك تعرض!</h2>
-            <p className="mt-1 text-sm text-slate-400">
-              وصف العنصر ده من غير ما تقول اسمه — والمخمّن لازم يعرف اسمه.
-            </p>
-
-            <div className="mx-auto mt-5 flex max-w-sm flex-col items-center gap-3 rounded-2xl border border-white/10 bg-night-800/40 p-6">
-              {item?.imageUrl ? (
-                <img
-                  src={item.imageUrl}
-                  alt="العنصر المطلوب وصفه"
-                  className="max-h-48 w-auto rounded-xl object-contain"
-                />
-              ) : (
-                <span className="text-6xl">{item?.imageEmoji || '🖼️'}</span>
-              )}
-              <span className={`rounded-lg px-2.5 py-1 text-xs font-black ring-1 ${difficultyClass}`}>
-                {item?.difficulty || 'سهل'}
-              </span>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={submitting || !guess.trim()}
+                  className="flex-1 rounded-xl bg-brand-500 py-3 text-lg font-black text-night-950 transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {submitting ? 'بينحسب...' : 'تأكيد التخمين 🔍'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setGuessOpen(false)}
+                  className="flex-1 rounded-xl border border-white/10 bg-night-700 py-3 text-lg font-black text-white transition hover:bg-night-600"
+                >
+                  إلغاء
+                </button>
+              </div>
             </div>
-
-            <p className="mt-4 animate-pulse text-sm font-bold text-brand-300">
-              في انتظار تخمين {guesser?.username}... ⏳
+          </form>
+        ) : (
+          // ── Active round (both have the button) ──
+          <div className="glass rounded-3xl p-6 text-center sm:p-8">
+            <span className="text-5xl">🗣️</span>
+            <h2 className="mt-2 text-2xl font-black text-white">الدور نشط</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              وصف الصورة وسألك — أو اخمن الآن.
             </p>
+            <button
+              onClick={() => setGuessOpen(true)}
+              className="mt-5 rounded-xl bg-gold-500 px-6 py-3 text-lg font-black text-night-950 transition hover:bg-gold-400"
+            >
+              عايز أخمن
+            </button>
           </div>
-        ) : null}
+        )}
 
         {/* Leave */}
         <button
@@ -392,7 +339,7 @@ export default function HebdGame({ room, players, match, round, item, myPlayer, 
         >
           {leaving ? 'بنسيب اللعبة...' : 'خروج من اللعبة'}
         </button>
-      </div>
+      </section>
     </div>
   );
 }

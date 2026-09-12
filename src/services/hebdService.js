@@ -84,15 +84,6 @@ export async function submitHebdGuess(roomId, guess) {
   return camelcaseKeys(data?.[0]);
 }
 
-// Timeout reveal (idempotent, race-safe). Must only be called when the
-// authoritative ends_at has passed — the server enforces that.
-export async function expireHebdRound(roomId) {
-  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
-  const { data, error } = await supabase.rpc('expire_hebd_round', { p_room_id: roomId });
-  if (error) throw new Error(friendlyError(error, 'مش قدرنا نغلق الجولة.'));
-  return camelcaseKeys(data?.[0]);
-}
-
 // Revealed round -> next round, or end of match on the final round.
 export async function nextHebdRound(roomId) {
   if (!roomId) throw new Error('معرّف الغرفة مفقود.');
@@ -180,15 +171,15 @@ export function subscribeHebdRound(roomId, roundId, onData, onError) {
   return () => supabase.removeChannel(channel);
 }
 
-// Public item metadata (image + difficulty) — never a secret answer.
-export async function fetchHebdItem(itemId) {
-  if (!itemId) return null;
+
+// Fetch several public items at once (both players' images for a round).
+export async function fetchHebdItems(itemIds) {
+  if (!itemIds || itemIds.length === 0) return [];
   const { data, error } = await supabase
     .from('hebd_items')
     .select('id, image_emoji, image_url, difficulty')
-    .eq('id', itemId)
-    .single();
+    .in('id', itemIds);
 
-  if (error) throw new Error(friendlyError(error, 'مش قدرنا نجيب العنصر.'));
-  return camelcaseKeys(data);
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نجيب العناصر.'));
+  return camelcaseKeys(data || []);
 }

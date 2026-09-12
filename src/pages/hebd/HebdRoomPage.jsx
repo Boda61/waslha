@@ -9,7 +9,7 @@ import { subscribeRoom, subscribePlayers, leaveRoom } from '../../services/roomS
 import {
   subscribeHebdMatch,
   subscribeHebdRound,
-  fetchHebdItem,
+  fetchHebdItems,
   setHebdReady,
   startHebdMatch,
 } from '../../services/hebdService.js';
@@ -24,7 +24,7 @@ export default function HebdRoomPage() {
   const [players, setPlayers] = useState([]);
   const [match, setMatch] = useState(null);
   const [round, setRound] = useState(null);
-  const [item, setItem] = useState(null);
+  const [itemsById, setItemsById] = useState({});
   const [notFound, setNotFound] = useState(false);
   const [busy, setBusy] = useState('');
 
@@ -77,22 +77,29 @@ export default function HebdRoomPage() {
     );
   }, [playing, match?.currentRoundId, roomId]);
 
-  // Item metadata for the presenter view (fetched per round).
+  // Public item metadata for BOTH assigned images — fetched once per round
+  // into a map keyed by item id. Secret answers are NEVER touched here.
+  const itemIdsKey = `${round?.itemId || ''},${round?.item2Id || ''}`;
   useEffect(() => {
-    if (!round?.itemId) {
-      setItem(null);
+    if (itemIdsKey === ',') {
+      setItemsById({});
       return undefined;
     }
     let mounted = true;
-    fetchHebdItem(round.itemId)
-      .then((data) => {
-        if (mounted) setItem(data);
+    fetchHebdItems(itemIdsKey.split(',').filter(Boolean))
+      .then((items) => {
+        if (!mounted) return;
+        const map = {};
+        for (const it of items) map[it.id] = it;
+        setItemsById(map);
       })
-      .catch((err) => console.error('fetchHebdItem error:', err));
+      .catch((err) => console.error('fetchHebdItems error:', err));
     return () => {
       mounted = false;
     };
-  }, [round?.itemId]);
+  }, [itemIdsKey]);
+  
+
 
   const myUserId = user?.id;
   const myPlayer = myUserId ? players.find((p) => p.userId === myUserId) : null;
@@ -194,8 +201,8 @@ export default function HebdRoomPage() {
         room={room}
         players={players}
         match={match}
-        round={round}
-        item={item}
+                round={round}
+        itemsById={itemsById}
         myPlayer={myPlayer}
         onLeave={handleLeave}
       />
