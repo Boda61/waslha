@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { supabase } from '../lib/firebase.js';
+import { supabase } from '../lib/Supabase.js';
 import { useLoading } from './LoadingContext.jsx';
 
 const AuthContext = createContext(null);

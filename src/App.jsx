@@ -9,6 +9,8 @@ import Profile from './pages/Profile.jsx';
 import CreateRoom from './pages/CreateRoom.jsx';
 import JoinRoom from './pages/JoinRoom.jsx';
 import RoomPage from './pages/RoomPage.jsx';
+import HebdHome from './pages/hebd/HebdHome.jsx';
+import HebdRoomPage from './pages/hebd/HebdRoomPage.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 function App() {
@@ -63,6 +65,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <RoomPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hebd"
+            element={
+              <ProtectedRoute>
+                <HebdHome />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/hebd/lobby/:roomId"
+            element={
+              <ProtectedRoute>
+                <HebdRoomPage />
               </ProtectedRoute>
             }
           />

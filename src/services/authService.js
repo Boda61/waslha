@@ -1,4 +1,4 @@
-import { supabase } from '../lib/firebase.js';
+import { supabase } from '../lib/Supabase.js';
 import { friendlyError } from '../utils/helpers.js';
 
 // Registers an email/password user with Supabase Auth, then creates a secure

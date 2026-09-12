@@ -1,4 +1,4 @@
-import { supabase } from '../lib/firebase.js';
+import { supabase } from '../lib/Supabase.js';
 import { friendlyError, camelcaseKeys } from '../utils/helpers.js';
 import { CHAT_LIMITS } from '../utils/constants.js';
 

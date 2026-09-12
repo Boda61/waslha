@@ -1,4 +1,4 @@
-import { supabase } from '../lib/firebase.js';
+import { supabase } from '../lib/Supabase.js';
 import { friendlyError, camelcaseKeys } from '../utils/helpers.js';
 
 // ── Server-validated (RPC) actions ──────────────────────────────────────────

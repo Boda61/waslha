@@ -1,4 +1,4 @@
-import { supabase } from '../lib/firebase.js';
+import { supabase } from '../lib/Supabase.js';
 import { friendlyError } from '../utils/helpers.js';
 
 // Update display username (validated for uniqueness by the server-side RPC).

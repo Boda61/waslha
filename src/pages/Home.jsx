@@ -81,6 +81,35 @@ export default function Home() {
         )}
       </section>
 
+      {/* Hebd entry */}
+      <section className="glass mt-10 flex flex-col items-center gap-6 rounded-3xl border border-gold-500/20 bg-gradient-to-br from-gold-500/10 to-brand-500/10 p-8 text-center sm:flex-row sm:text-right">
+        <span className="text-6xl">🎮</span>
+        <div className="flex-1">
+          <h2 className="text-3xl font-black text-white">
+            هبد في هبد <span className="text-gold-300">⚡ جديد</span>
+          </h2>
+          <p className="mt-2 leading-relaxed text-slate-300">
+            مود 1 ضد 1 للمرة الأولى! كل واحد بياخد دوره يعرض والتاني يحزر.
+            مفيش فرق ومفيش زحمة — انت وصاحبك بس 😏
+          </p>
+        </div>
+        {isAuthenticated ? (
+          <Link
+            to="/hebd"
+            className="shrink-0 rounded-2xl bg-gold-500 px-6 py-3 text-lg font-black text-night-950 shadow-lg shadow-gold-500/25 transition hover:scale-105 hover:bg-gold-400"
+          >
+            العب هبد في هبد →
+          </Link>
+        ) : (
+          <Link
+            to="/register"
+            className="shrink-0 rounded-2xl bg-gold-500 px-6 py-3 text-lg font-black text-night-950 shadow-lg shadow-gold-500/25 transition hover:scale-105 hover:bg-gold-400"
+          >
+            ابدأ دلوقتي
+          </Link>
+        )}
+      </section>
+
       {/* How to play */}
       <section className="mt-8" aria-label="إزاي تلعب">
         <h2 className="mb-6 text-center text-3xl font-extrabold text-white">
