@@ -183,3 +183,208 @@ export async function fetchHebdItems(itemIds) {
   if (error) throw new Error(friendlyError(error, 'مش قدرنا نجيب العناصر.'));
   return camelcaseKeys(data || []);
 }
+
+// ── Cards RPCs ──────────────────────────────────────────────────────────────
+
+// 🔴 Use Red Card (guesser only): creates 3 question slots
+export async function callUseHebdRedCard(roomId) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  const { data, error } = await supabase.rpc('use_hebd_red_card', {
+    p_room_id: roomId,
+  });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نستخدم الكارت الأحمر.'));
+  return camelcaseKeys(data?.[0]);
+}
+
+// 🔴 Submit a red-card question (guesser only)
+export async function submitHebdRedQuestion(roomId, question) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  const clean = (question || '').trim();
+  if (!clean) throw new Error('اكتب السؤال الأول.');
+  if (clean.length > 200) throw new Error('السؤال طويل أوي (الحد 200 حرف).');
+
+  const { data, error } = await supabase.rpc('submit_hebd_red_question', {
+    p_room_id: roomId,
+    p_question: clean,
+  });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نبعت السؤال.'));
+  return camelcaseKeys(data?.[0]);
+}
+
+// 🔴 Answer a red-card question (presenter only)
+export async function answerHebdRedQuestion(roomId, answer) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  const clean = (answer || '').trim();
+  if (!clean) throw new Error('اكتب الإجابة الأول.');
+
+  const { data, error } = await supabase.rpc('answer_hebd_red_question', {
+    p_room_id: roomId,
+    p_answer: clean,
+  });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نسجل الإجابة.'));
+  return camelcaseKeys(data?.[0]);
+}
+
+// 🟢 Use Green Card (guesser only): request a hint from presenter
+export async function callUseHebdGreenCard(roomId) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  const { data, error } = await supabase.rpc('use_hebd_green_card', {
+    p_room_id: roomId,
+  });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نستخدم الكارت الأخضر.'));
+  return camelcaseKeys(data?.[0]);
+}
+
+// 🟢 Provide a green-card hint (presenter only)
+export async function provideHebdGreenHint(roomId, hint) {
+  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
+  const clean = (hint || '').trim();
+  if (!clean) throw new Error('اكتب التلميح الأول.');
+  if (clean.length > 200) throw new Error('التلميح طويل أوي (الحد 200 حرف).');
+
+  const { data, error } = await supabase.rpc('provide_hebd_green_hint', {
+    p_room_id: roomId,
+    p_hint: clean,
+  });
+  if (error) throw new Error(friendlyError(error, 'مش قدرنا نبعت التلميح.'));
+  return camelcaseKeys(data?.[0]);
+}
+
+// ── Card subscriptions ──────────────────────────────────────────────────────
+
+// Subscribe to red-card questions for the current round
+export function subscribeHebdRedCardQuestions(roomId, roundId, onData, onError) {
+  if (!roundId) {
+    onError?.(new Error('مفيش جولة حالية.'));
+    return () => {};
+  }
+
+  const channel = supabase
+    .channel(`public:hebd_red_card_questions:round_id=${roundId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'hebd_red_card_questions', filter: `round_id=eq.${roundId}` },
+      () => {
+        // Re-fetch all questions on any change
+        supabase
+          .from('hebd_red_card_questions')
+          .select('*')
+          .eq('round_id', roundId)
+          .order('question_number', { ascending: true })
+          .then(({ data, error }) => {
+            if (error) {
+              onError?.(error);
+              return;
+            }
+            onData(camelcaseKeys(data || []));
+          });
+      },
+    )
+    .subscribe();
+
+  // Initial fetch
+  supabase
+    .from('hebd_red_card_questions')
+    .select('*')
+    .eq('round_id', roundId)
+    .order('question_number', { ascending: true })
+    .then(({ data, error }) => {
+      if (error) {
+        onError?.(error);
+        return;
+      }
+      onData(camelcaseKeys(data || []));
+    });
+
+  return () => supabase.removeChannel(channel);
+}
+
+// Subscribe to green-card hints for the current round
+export function subscribeHebdGreenCardHints(roomId, roundId, onData, onError) {
+  if (!roundId) {
+    onError?.(new Error('مفيش جولة حالية.'));
+    return () => {};
+  }
+
+  const channel = supabase
+    .channel(`public:hebd_green_card_hints:round_id=${roundId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'hebd_green_card_hints', filter: `round_id=eq.${roundId}` },
+      () => {
+        supabase
+          .from('hebd_green_card_hints')
+          .select('*')
+          .eq('round_id', roundId)
+          .single()
+          .then(({ data, error }) => {
+            if (error && error.code !== 'PGRST116') {
+              onError?.(error);
+              return;
+            }
+            onData(camelcaseKeys(data));
+          });
+      },
+    )
+    .subscribe();
+
+  // Initial fetch
+  supabase
+    .from('hebd_green_card_hints')
+    .select('*')
+    .eq('round_id', roundId)
+    .single()
+    .then(({ data, error }) => {
+      if (error && error.code !== 'PGRST116') {
+        onError?.(error);
+        return;
+      }
+      onData(camelcaseKeys(data));
+    });
+
+  return () => supabase.removeChannel(channel);
+}
+
+// Subscribe to card usage (to track which cards were used)
+export function subscribeHebdCardUses(roomId, onData, onError) {
+  if (!roomId) {
+    onError?.(new Error('معرّف الغرفة مفقود.'));
+    return () => {};
+  }
+
+  const channel = supabase
+    .channel(`public:hebd_card_uses:room_id=${roomId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'hebd_card_uses', filter: `room_id=eq.${roomId}` },
+      () => {
+        supabase
+          .from('hebd_card_uses')
+          .select('*')
+          .eq('room_id', roomId)
+          .then(({ data, error }) => {
+            if (error) {
+              onError?.(error);
+              return;
+            }
+            onData(camelcaseKeys(data || []));
+          });
+      },
+    )
+    .subscribe();
+
+  // Initial fetch
+  supabase
+    .from('hebd_card_uses')
+    .select('*')
+    .eq('room_id', roomId)
+    .then(({ data, error }) => {
+      if (error) {
+        onError?.(error);
+        return;
+      }
+      onData(camelcaseKeys(data || []));
+    });
+
+  return () => supabase.removeChannel(channel);
+}

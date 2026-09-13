@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import Avatar from '../../components/Avatar.jsx';
 import VoiceChatControls from '../../components/VoiceChatControls.jsx';
+import RoundWinnerOverlay from '../../components/RoundWinnerOverlay.jsx';
+import GameWinnerOverlay from '../../components/GameWinnerOverlay.jsx';
 import useVoiceCall from '../../hooks/useVoiceCall.js';
+import useHebdCards from '../../hooks/useHebdCards.js';
+import useHebdGameEvents from '../../hooks/useHebdGameEvents.js';
 import { submitHebdGuess, nextHebdRound } from '../../services/hebdService.js';
 
 const DIFFICULTY_COLORS = {
@@ -21,11 +25,26 @@ export default function HebdGame({ room, players, match, round, itemsById, myPla
   const [submitting, setSubmitting] = useState(false);
   const [advancing, setAdvancing] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [showRoundWinner, setShowRoundWinner] = useState(null);
+  const [showGameEnd, setShowGameEnd] = useState(null);
+
+  // Red card question/answer UI state
+  const [redQuestionInput, setRedQuestionInput] = useState('');
+  const [redAnswerInput, setRedAnswerInput] = useState('');
+  const [showRedQuestionForm, setShowRedQuestionForm] = useState(false);
+  const [showRedAnswerForm, setShowRedAnswerForm] = useState(false);
+  const [currentRedQuestion, setCurrentRedQuestion] = useState(null);
+
+  // Green card hint UI state
+  const [greenHintInput, setGreenHintInput] = useState('');
+  const [showGreenHintForm, setShowGreenHintForm] = useState(false);
 
   const myUserId = myPlayer?.userId;
   const roomId = room?.id;
   const revealed = !!round && round.status === 'revealed';
   const matchEnded = !!match && match.status === 'ended';
+  const isGuesser = round?.guesserId === myUserId;
+  const isPresenter = round?.presenterId === myUserId;
 
   // Live voice chat with the other player (WebRTC + Realtime signaling).
   const peerPlayer = players.find((p) => p.userId !== myUserId) || null;
@@ -36,6 +55,33 @@ export default function HebdGame({ room, players, match, round, itemsById, myPla
     myUserId: myUserId || null,
     peerUserId,
     onError: (msg) => push(msg, 'error'),
+  });
+
+  // Cards hook
+  const cards = useHebdCards({
+    roomId,
+    roundId: round?.id,
+    match,
+    round,
+    myUserId,
+  });
+
+  // Game events hooks with duplicate protection
+  const handleRoundWin = useCallback((result) => {
+    setShowRoundWinner(result);
+  }, []);
+
+  const handleGameEnd = useCallback((result) => {
+    setShowGameEnd(result);
+  }, []);
+
+  useHebdGameEvents({
+    match,
+    round,
+    players,
+    myUserId,
+    onRoundWin: handleRoundWin,
+    onGameEnd: handleGameEnd,
   });
 
   // ── Actions (server-authoritative — client never decides correctness) ──
@@ -84,6 +130,73 @@ export default function HebdGame({ room, players, match, round, itemsById, myPla
       setLeaving(false);
     }
   };
+
+  // ── Red Card Actions ──
+  const handleUseRedCard = async () => {
+    try {
+      await cards.useRedCard();
+      push('🔴 الكارت الأحمر فعال! 3 أسئلة', 'success');
+    } catch (err) {
+      push(err.message, 'error');
+    }
+  };
+
+  const handleSubmitRedQuestion = async (e) => {
+    e.preventDefault();
+    if (!redQuestionInput.trim()) return;
+    try {
+      await cards.submitRedQuestion(redQuestionInput);
+      setRedQuestionInput('');
+      setShowRedQuestionForm(false);
+      push('السؤال اتبعت!', 'success');
+    } catch (err) {
+      push(err.message, 'error');
+    }
+  };
+
+  const handleAnswerRedQuestion = async (e) => {
+    e.preventDefault();
+    if (!redAnswerInput.trim()) return;
+    try {
+      await cards.answerRedQuestion(redAnswerInput);
+      setRedAnswerInput('');
+      setShowRedAnswerForm(false);
+      setCurrentRedQuestion(null);
+      push('الإجابة اتسجلت!', 'success');
+    } catch (err) {
+      push(err.message, 'error');
+    }
+  };
+
+  // ── Green Card Actions ──
+  const handleUseGreenCard = async () => {
+    try {
+      await cards.useGreenCard();
+      push('🟢 الكارت الأخضر فعال! استنى التلميح من اللاعب التاني', 'success');
+    } catch (err) {
+      push(err.message, 'error');
+    }
+  };
+
+  const handleProvideGreenHint = async (e) => {
+    e.preventDefault();
+    if (!greenHintInput.trim()) return;
+    try {
+      await cards.provideGreenHint(greenHintInput);
+      setGreenHintInput('');
+      setShowGreenHintForm(false);
+      push('التلميح اتبعت!', 'success');
+    } catch (err) {
+      push(err.message, 'error');
+    }
+  };
+
+  // Check if there's a red question to answer
+  const pendingRedQuestion = cards.redQuestions?.find((q) => q.question && !q.answer);
+  const unansweredRedQuestion = cards.redQuestions?.find((q) => !q.question);
+
+  // Check if green hint is requested
+  const greenHintRequested = cards.greenRequested && isPresenter;
 
   const sortedPlayers = [...players].sort((a, b) => {
     const aHost = a.userId === room?.hostId ? 0 : 1;
@@ -229,6 +342,88 @@ export default function HebdGame({ room, players, match, round, itemsById, myPla
         </span>
       </header>
 
+      {/* Cards Section */}
+      {!revealed && match?.status === 'playing' && (
+        <section className="glass mt-4 rounded-2xl p-4">
+          <h3 className="text-sm font-bold text-slate-400 mb-3">الكروت</h3>
+          <div className="flex gap-3">
+            <button
+              onClick={handleUseRedCard}
+              disabled={cards.redUsed || !isGuesser || cards.usingRed}
+              className={`flex-1 rounded-xl p-3 text-center transition ${
+                cards.redUsed
+                  ? 'bg-night-800 opacity-50 cursor-not-allowed'
+                  : 'bg-rose-500/20 hover:bg-rose-500/30 ring-1 ring-rose-500/40'
+              }`}
+            >
+              <span className="text-2xl">🔴</span>
+              <p className="text-xs font-bold text-white mt-1">
+                {cards.redUsed ? 'تم الاستخدام' : 'الكارت الأحمر'}
+              </p>
+              {!cards.redUsed && <p className="text-[10px] text-slate-400">3 أسئلة</p>}
+            </button>
+            <button
+              onClick={handleUseGreenCard}
+              disabled={cards.greenUsed || !isGuesser || cards.usingGreen}
+              className={`flex-1 rounded-xl p-3 text-center transition ${
+                cards.greenUsed
+                  ? 'bg-night-800 opacity-50 cursor-not-allowed'
+                  : 'bg-emerald-500/20 hover:bg-emerald-500/30 ring-1 ring-emerald-500/40'
+              }`}
+            >
+              <span className="text-2xl">🟢</span>
+              <p className="text-xs font-bold text-white mt-1">
+                {cards.greenUsed ? 'تم الاستخدام' : 'الكارت الأخضر'}
+              </p>
+              {!cards.greenUsed && <p className="text-[10px] text-slate-400">تلميح</p>}
+            </button>
+          </div>
+          {cards.redActive && (
+            <div className="mt-3 rounded-xl bg-rose-500/10 p-3">
+              <p className="text-xs font-bold text-rose-300 mb-2">
+                🔴 الكارت الأحمر فعال — {cards.remainingQuestions} أسئلة متبقية
+              </p>
+              {isGuesser && unansweredRedQuestion && (
+                <button
+                  onClick={() => setShowRedQuestionForm(true)}
+                  className="w-full rounded-lg bg-rose-500/20 py-2 text-sm font-bold text-white hover:bg-rose-500/30"
+                >
+                  سؤال {unansweredRedQuestion.questionNumber}
+                </button>
+              )}
+              {isPresenter && pendingRedQuestion && (
+                <div className="mt-2 rounded-lg bg-night-800 p-2">
+                  <p className="text-sm font-bold text-white">{pendingRedQuestion.question}</p>
+                  <button
+                    onClick={() => { setCurrentRedQuestion(pendingRedQuestion); setShowRedAnswerForm(true); }}
+                    className="mt-2 w-full rounded-lg bg-brand-500 py-2 text-sm font-bold text-night-950"
+                  >
+                    أجب على السؤال
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          {cards.greenProvided && cards.greenHint && (
+            <div className="mt-3 rounded-xl bg-emerald-500/10 p-3">
+              <p className="text-xs font-bold text-emerald-300 mb-1">🟢 التلميح:</p>
+              <p className="text-sm font-bold text-white">{cards.greenHint.hint}</p>
+            </div>
+          )}
+          {greenHintRequested && (
+            <div className="mt-3 rounded-xl bg-emerald-500/10 p-3">
+              <p className="text-xs font-bold text-emerald-300 mb-2">🟢 اللاعب التاني طلب تلميح</p>
+              <button
+                onClick={() => setShowGreenHintForm(true)}
+                className="w-full rounded-lg bg-emerald-500/20 py-2 text-sm font-bold text-white hover:bg-emerald-500/30"
+              >
+                اكتب تلميح
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Players — both see their own image */}
       <section className="mt-4 grid gap-3 sm:grid-cols-2">
         {sortedPlayers.map((p) =>
@@ -340,6 +535,129 @@ export default function HebdGame({ room, players, match, round, itemsById, myPla
           {leaving ? 'بنسيب اللعبة...' : 'خروج من اللعبة'}
         </button>
       </section>
+
+      {/* Red Question Form Modal */}
+      {showRedQuestionForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="glass rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-black text-white mb-4">سؤال {unansweredRedQuestion?.questionNumber}</h3>
+            <form onSubmit={handleSubmitRedQuestion}>
+              <input
+                autoFocus
+                value={redQuestionInput}
+                onChange={(e) => setRedQuestionInput(e.target.value)}
+                placeholder="اكتب سؤالك..."
+                maxLength={200}
+                className="w-full rounded-xl border border-white/10 bg-night-800 px-4 py-3 text-white outline-none focus:border-brand-400"
+              />
+              <div className="mt-4 flex gap-3">
+                <button
+                  type="submit"
+                  disabled={cards.submittingQuestion || !redQuestionInput.trim()}
+                  className="flex-1 rounded-xl bg-brand-500 py-3 font-black text-night-950 hover:bg-brand-400 disabled:opacity-60"
+                >
+                  {cards.submittingQuestion ? 'بينبعت...' : 'ابعت السؤال'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowRedQuestionForm(false); setRedQuestionInput(''); }}
+                  className="flex-1 rounded-xl border border-white/10 bg-night-700 py-3 font-bold text-white"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Red Answer Form Modal */}
+      {showRedAnswerForm && currentRedQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="glass rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-black text-white mb-2">جواب على السؤال</h3>
+            <p className="text-sm text-slate-400 mb-4">{currentRedQuestion.question}</p>
+            <form onSubmit={handleAnswerRedQuestion}>
+              <input
+                autoFocus
+                value={redAnswerInput}
+                onChange={(e) => setRedAnswerInput(e.target.value)}
+                placeholder="اكتب إجابتك..."
+                className="w-full rounded-xl border border-white/10 bg-night-800 px-4 py-3 text-white outline-none focus:border-brand-400"
+              />
+              <div className="mt-4 flex gap-3">
+                <button
+                  type="submit"
+                  disabled={cards.answeringQuestion || !redAnswerInput.trim()}
+                  className="flex-1 rounded-xl bg-brand-500 py-3 font-black text-night-950 hover:bg-brand-400 disabled:opacity-60"
+                >
+                  {cards.answeringQuestion ? 'بيتسجل...' : 'بعت الإجابة'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowRedAnswerForm(false); setRedAnswerInput(''); setCurrentRedQuestion(null); }}
+                  className="flex-1 rounded-xl border border-white/10 bg-night-700 py-3 font-bold text-white"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Green Hint Form Modal */}
+      {showGreenHintForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="glass rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-black text-white mb-4">🟢 اكتب تلميح</h3>
+            <form onSubmit={handleProvideGreenHint}>
+              <input
+                autoFocus
+                value={greenHintInput}
+                onChange={(e) => setGreenHintInput(e.target.value)}
+                placeholder="اكتب تلميح عن الصورة..."
+                maxLength={200}
+                className="w-full rounded-xl border border-white/10 bg-night-800 px-4 py-3 text-white outline-none focus:border-emerald-400"
+              />
+              <p className="mt-1 text-xs text-slate-500">ملحوظة: التلميح ده هيظهر للاعب التاني</p>
+              <div className="mt-4 flex gap-3">
+                <button
+                  type="submit"
+                  disabled={cards.providingHint || !greenHintInput.trim()}
+                  className="flex-1 rounded-xl bg-emerald-500 py-3 font-black text-night-950 hover:bg-emerald-400 disabled:opacity-60"
+                >
+                  {cards.providingHint ? 'بينبعت...' : 'ابعت التلميح'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowGreenHintForm(false); setGreenHintInput(''); }}
+                  className="flex-1 rounded-xl border border-white/10 bg-night-700 py-3 font-bold text-white"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Round Winner Overlay */}
+      {showRoundWinner && (
+        <RoundWinnerOverlay
+          roundResult={showRoundWinner}
+          onClose={() => setShowRoundWinner(null)}
+        />
+      )}
+
+      {/* Game End Overlay */}
+      {showGameEnd && (
+        <GameWinnerOverlay
+          gameResult={showGameEnd}
+          onPlayAgain={() => navigate('/hebd')}
+          onLeave={handleLeave}
+        />
+      )}
     </div>
   );
 }
