@@ -31,9 +31,8 @@ export default function useHebdCards({ roomId, roundId, match, round, myUserId }
   const redUsed = myCardUses.some((cu) => cu.card === 'red');
   const greenUsed = myCardUses.some((cu) => cu.card === 'green');
 
-  const activeRedQuestions = redQuestions.filter(
-    (q) => q.roundId === roundId && cardUses.some((cu) => cu.card === 'red' && cu.roundId === q.roundId)
-  );
+  // Filter questions by roundId only - the subscription already filters by round
+  const activeRedQuestions = redQuestions.filter((q) => q.roundId === roundId);
   const remainingQuestions = activeRedQuestions.filter((q) => !q.question).length;
 
   useEffect(() => {
@@ -114,8 +113,8 @@ export default function useHebdCards({ roomId, roundId, match, round, myUserId }
   return {
     cardUses, redUsed, greenUsed, myCardUses,
     redQuestions: activeRedQuestions, remainingQuestions,
-    redActive: redUsed && !isRevealed,
-    greenHint, greenRequested: greenUsed && !greenHint?.hint, greenProvided: !!greenHint?.hint,
+    redActive: activeRedQuestions.length > 0 && !isRevealed,
+    greenHint, greenRequested: greenUsed && !greenHint, greenProvided: !!greenHint?.hint,
     usingRed, usingGreen, submittingQuestion, answeringQuestion, providingHint,
     useRedCard: handleUseRedCard, useGreenCard: handleUseGreenCard,
     submitRedQuestion: handleSubmitRedQuestion, answerRedQuestion: handleAnswerRedQuestion,

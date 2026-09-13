@@ -112,10 +112,11 @@ export default function HebdGame({ room, players, match, round, itemsById, myPla
       await nextHebdRound(roomId);
       setGuessOpen(false);
       setGuess('');
-      // Server creates the next round or ends the match — realtime handles UI.
+      setShowRoundWinner(null);
     } catch (err) {
       console.error('next_hebd_round error:', err);
       push(err.message, 'error');
+    } finally {
       setAdvancing(false);
     }
   };
@@ -244,6 +245,15 @@ export default function HebdGame({ room, players, match, round, itemsById, myPla
             العب تاني 🎮
           </button>
         </div>
+
+        {/* Game End Overlay */}
+        {showGameEnd && (
+          <GameWinnerOverlay
+            gameResult={showGameEnd}
+            onPlayAgain={() => navigate('/hebd')}
+            onLeave={handleLeave}
+          />
+        )}
       </div>
     );
   }
@@ -390,6 +400,26 @@ export default function HebdGame({ room, players, match, round, itemsById, myPla
                 >
                   سؤال {unansweredRedQuestion.questionNumber}
                 </button>
+              )}
+              {cards.redQuestions?.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  {cards.redQuestions.map((q) => (
+                    <div key={q.id} className="rounded-lg bg-night-800/60 p-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-bold ${q.answer ? 'text-emerald-400' : q.question ? 'text-amber-400' : 'text-slate-500'}`}>
+                          {q.answer ? '✓' : q.question ? '◉' : '○'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-300">سؤال {q.questionNumber}</span>
+                      </div>
+                      {q.question && (
+                        <p className="mt-1 text-xs text-slate-400">{q.question}</p>
+                      )}
+                      {q.answer && (
+                        <p className="mt-1 text-xs font-bold text-emerald-300">الإجابة: {q.answer}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
               {isPresenter && pendingRedQuestion && (
                 <div className="mt-2 rounded-lg bg-night-800 p-2">
@@ -650,7 +680,7 @@ export default function HebdGame({ room, players, match, round, itemsById, myPla
         />
       )}
 
-      {/* Game End Overlay */}
+      {/* Game End Overlay — shown when game ends */}
       {showGameEnd && (
         <GameWinnerOverlay
           gameResult={showGameEnd}
