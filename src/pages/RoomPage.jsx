@@ -22,7 +22,6 @@ import {
   submitClue,
   submitAnswer,
   nextRound,
-  expireRound,
   subscribeRoundAnswers,
 } from '../services/gameService.js';
 import { ROOM_STATUS } from '../utils/constants.js';
@@ -171,13 +170,6 @@ export default function RoomPage() {
     }
   }, [roomId, currentRoundId, push]);
 
-  const handleExpireRound = useCallback(async () => {
-    try {
-      await expireRound(roomId, currentRoundId);
-    } catch (err) {
-      push(err.message, 'error');
-    }
-  }, [roomId, currentRoundId, push]);
 
   if (notFound) {
     return (
@@ -264,7 +256,6 @@ export default function RoomPage() {
       onSubmitAnswer={handleSubmitAnswer}
       onMakeLeader={handleChangeLeader}
       onNextRound={handleNextRound}
-      onExpireRound={handleExpireRound}
       onLeave={handleLeave}
       leaving={leaving}
     />

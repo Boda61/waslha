@@ -62,11 +62,6 @@ export const SCORING = {
   correctPrediction: 20,
 };
 
-export const TIMERS = {
-  answerSeconds: 30,
-  resultSeconds: 8,
-};
-
 export const CHAT_LIMITS = {
   maxLength: 200,
 };

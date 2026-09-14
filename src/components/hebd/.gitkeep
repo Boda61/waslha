@@ -1,0 +1,6 @@
+src/
+├── components/
+│   └── hebd/
+│       ├── HebdCard.jsx
+│       ├── HebdHome.jsx
+│       ├── HebdItemImage.jsx

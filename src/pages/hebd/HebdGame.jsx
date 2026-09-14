@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+﻿import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext.jsx';
+import HebdItemImage from '../../components/hebd/HebdItemImage.jsx';
 import Avatar from '../../components/Avatar.jsx';
 import VoiceChatControls from '../../components/VoiceChatControls.jsx';
 import RoundWinnerOverlay from '../../components/RoundWinnerOverlay.jsx';

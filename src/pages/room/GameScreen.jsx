@@ -2,13 +2,12 @@ import { useEffect, useState } from 'react';
 import Scoreboard from '../../components/Scoreboard.jsx';
 import ChatLauncher from '../../components/ChatLauncher.jsx';
 import TeamBadge from '../../components/TeamBadge.jsx';
-import Timer from '../../components/Timer.jsx';
 import PlayerCard from '../../components/PlayerCard.jsx';
 import LeaderPanel from './LeaderPanel.jsx';
 import RacePanel from './RacePanel.jsx';
 import RoundResultModal from './RoundResultModal.jsx';
 import GameOverModal from './GameOverModal.jsx';
-import { TIMERS, TOTAL_ROUNDS } from '../../utils/constants.js';
+import { TOTAL_ROUNDS } from '../../utils/constants.js';
 
 export default function GameScreen({
   room,
@@ -22,20 +21,19 @@ export default function GameScreen({
   onSubmitAnswer,
   onMakeLeader,
   onNextRound,
-  onExpireRound,
   onSetTeam,
   onLeave,
   leaving,
 }) {
   const [clueSubmitting, setClueSubmitting] = useState(false);
   const [answerSubmitting, setAnswerSubmitting] = useState(false);
-  const [expired, setExpired] = useState(false);
   const [pendingChoice, setPendingChoice] = useState(null);
+  const [advancing, setAdvancing] = useState(false);
 
   // Reset local submission state when a new round starts.
   useEffect(() => {
-    setExpired(false);
     setPendingChoice(null);
+    setAdvancing(false);
   }, [round?.id]);
 
   if (!room || !round || !challenge || !myPlayer) {
@@ -55,6 +53,9 @@ export default function GameScreen({
   const inRace = round.status === 'clue_submitted';
   const leaderLocked = isLeader; // The leader NEVER answers, even when alone.
   const canChat = !revealed && inRace && (soloMode || !!myTeam);
+  // Only the host or the round leader may push the game forward manually.
+  const isHost = room.hostId === myUid;
+  const canAdvanceRound = isHost || isLeader;
 
   const redMembers = players.filter((p) => p.team === 'red');
   const blueMembers = players.filter((p) => p.team === 'blue');
@@ -82,10 +83,16 @@ export default function GameScreen({
     }
   };
 
-  const handleTimerExpire = () => {
-    if (revealed || ended || expired) return;
-    setExpired(true);
-    onExpireRound?.();
+  // No round timer exists, so nobody gets locked by a deadline: the host or
+  // the leader moves the game on manually when a round is taking too long.
+  const handleSkipRound = async () => {
+    if (advancing) return;
+    setAdvancing(true);
+    try {
+      await onNextRound?.();
+    } finally {
+      setAdvancing(false);
+    }
   };
 
   const renderMain = () => {
@@ -96,16 +103,6 @@ export default function GameScreen({
           <p className="text-xl font-bold text-white">
             {revealed ? 'النتيجة...' : 'اللعبة خلصت'}
           </p>
-        </div>
-      );
-    }
-
-    if (expired) {
-      return (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl bg-night-800 px-6 py-16 text-center">
-          <span className="text-5xl">⏰</span>
-          <p className="text-lg font-bold text-white">انتهى وقت الجولة!</p>
-          <p className="text-sm text-slate-400">الجولة دي خلصت من غير فائز...</p>
         </div>
       );
     }
@@ -248,23 +245,20 @@ export default function GameScreen({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {!revealed && !ended && !expired && (
-            <Timer
-              deadline={round.endsAt}
-              durationSeconds={TIMERS.answerSeconds}
-              key={round.id}
-              onExpire={handleTimerExpire}
-            />
-          )}
-          {expired && (
-            <span className="rounded-full bg-rose-500/20 px-3 py-1 text-sm font-bold text-rose-300">
-              انتهى الوقت ⏰
-            </span>
-          )}
           {revealed && (
             <span className="rounded-full bg-gold-500/20 px-3 py-1 text-sm font-bold text-gold-300">
               نتيجة الجولة 🎬
             </span>
+          )}
+          {!revealed && !ended && canAdvanceRound && (
+            <button
+              type="button"
+              onClick={handleSkipRound}
+              disabled={advancing}
+              className="rounded-full border border-white/15 bg-night-700 px-3 py-1 text-sm font-bold text-slate-200 transition hover:border-brand-400/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {advancing ? '...' : 'الجولة الجاية ⏭'}
+            </button>
           )}
         </div>
       </div>

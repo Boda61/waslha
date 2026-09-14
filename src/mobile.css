@@ -72,7 +72,7 @@
     min-height: 2.4rem;
   }
 
-  /* Status bar → cinematic header with big fluid timer */
+  /* Status bar → cinematic header */
   .gs-status {
     flex-wrap: wrap;
     gap: clamp(0.4rem, 2vw, 0.75rem);
@@ -88,19 +88,6 @@
   }
   .gs-status .team-turn {
     font-size: clamp(0.72rem, 3.4vw, 0.88rem);
-  }
-
-  /* Big prominent fluid timer */
-  .timer-pill {
-    font-size: clamp(1.5rem, 9vw, 2.4rem);
-    line-height: 1;
-    padding: 0.4rem 1rem;
-    border-radius: 0.9rem;
-  }
-  .timer-bar {
-    width: clamp(3.5rem, 20vw, 5.5rem);
-    height: 0.4rem;
-    flex-shrink: 0;
   }
 
   /* Scoreboard compact */
@@ -312,9 +299,6 @@
   .gs-status {
     padding: 0.5rem 0.6rem;
   }
-  .timer-pill {
-    padding: 0.35rem 0.8rem;
-  }
   .gs-leave button:not(.chat-launcher-btn) {
     font-size: 0.72rem;
     padding: 0.4rem 0.7rem;
@@ -341,13 +325,6 @@
   .round-chip,
   .team-turn {
     font-size: 0.72rem;
-  }
-  .timer-pill {
-    font-size: clamp(1.1rem, 5.5vw, 1.5rem);
-    padding: 0.25rem 0.6rem;
-  }
-  .timer-bar {
-    width: clamp(2.5rem, 12vw, 4rem);
   }
   .gs-score,
   .gs-teams {

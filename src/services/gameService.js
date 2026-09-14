@@ -85,20 +85,6 @@ export async function submitPrediction(roomId, roundId, choiceIndex) {
   return camelcaseKeys(data?.[0]);
 }
 
-// Authoritative server-side timer expiration.
-// Any room member may call it; it only succeeds when the persisted
-// deadline has actually passed, then it advances the game.
-export async function expireRound(roomId, roundId) {
-  if (!roomId) throw new Error('معرّف الغرفة مفقود.');
-  if (!roundId) throw new Error('معرّف الجولة مفقود.');
-  const { data, error } = await supabase.rpc('expire_round', {
-    p_room_id: roomId,
-    p_round_id: roundId,
-  });
-  if (error) throw new Error(friendlyError(error, 'مش قدرنا ننهي الجولة.'));
-  return camelcaseKeys(data?.[0]);
-}
-
 // Host triggers the next round after the result countdown.
 export async function nextRound(roomId, roundId) {
   if (!roomId) throw new Error('معرّف الغرفة مفقود.');
